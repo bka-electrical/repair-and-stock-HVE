@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Plus, X, RefreshCw, Wrench, Package, CheckCircle, Search, ArrowLeft } from "lucide-react";
 import { repairsAPI } from "./api";
+import StokPage from "./pages/StokPage";
 
 export default function LaporanPekerjaan() {
   const [repairs, setRepairs] = useState([]);
@@ -585,24 +586,7 @@ export default function LaporanPekerjaan() {
     </div>
   )}
   {page === 'stok' && (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3 h-16">
-              <button onClick={() => setPage('perbaikan')} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                <ArrowLeft size={20} />
-              </button>
-              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-                <Package className="text-white" size={20} />
-              </div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Stok Komponen</h1>
-            </div>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <p className="text-gray-500 dark:text-gray-400">Konten stok akan diisi setelah spareparts.js siap.</p>
-        </main>
-      </div>
+      <StokPage onBack={() => setPage('perbaikan')} />
     )}
 
     <button
