@@ -1,3 +1,9 @@
+# Main spreadsheet Database
+https://docs.google.com/spreadsheets/d/1jnuPTpmYWK6opaAdKn7utvc1S5NQNX-lsz8VZ6gh4_U/edit?gid=1026863697#gid=1026863697
+
+# PERMINTAAN ELEKTRIK 2026
+https://docs.google.com/spreadsheets/d/18E7-wo16YOc_UpIb_LYEUhPhWpmE5EGn0ASSMpOATqY/edit?gid=1783492643#gid=1783492643
+
 # Field Work Report System
 
  
