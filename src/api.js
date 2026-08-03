@@ -1,8 +1,9 @@
 // src/api.js
-// Diperbarui: sekarang manggil backend Vercel (/api/repairs) yang sudah pakai Supabase,
+// Manggil backend Vercel (/api/repairs dan /api/stok) yang sudah pakai Supabase,
 // bukan lagi Google Apps Script secara langsung.
 
 const REPAIRS_URL = "/api/repairs";
+const STOK_URL = "/api/stok";
 
 export const repairsAPI = {
   getActive: async () => {
@@ -53,8 +54,7 @@ export const repairsAPI = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    const json = await res.json();
-    return json;
+    return res.json();
   },
 
   update: async (data) => {
@@ -63,7 +63,68 @@ export const repairsAPI = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
+    return res.json();
+  },
+
+  // ===== STOK =====
+
+  getStokElektrik: async () => {
+    const res = await fetch(`${STOK_URL}?action=getStokElektrik`);
     const json = await res.json();
-    return json;
+    return json.data;
+  },
+
+  getStokDinRad: async () => {
+    const res = await fetch(`${STOK_URL}?action=getStokDinRad`);
+    const json = await res.json();
+    return json.data;
+  },
+
+  getRiwayatElektrik: async (idStok) => {
+    const res = await fetch(`${STOK_URL}?action=getRiwayatElektrik&id_stok=${encodeURIComponent(idStok)}`);
+    const json = await res.json();
+    return json.data;
+  },
+
+  getRiwayatDinRad: async (idStok) => {
+    const res = await fetch(`${STOK_URL}?action=getRiwayatDinRad&id_stok=${encodeURIComponent(idStok)}`);
+    const json = await res.json();
+    return json.data;
+  },
+
+  addStokElektrik: async (data) => {
+    const res = await fetch(`${STOK_URL}?action=addStokElektrik`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  addStokDinRad: async (data) => {
+    const res = await fetch(`${STOK_URL}?action=addStokDinRad`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  addRiwayat: async (data) => {
+    const res = await fetch(`${STOK_URL}?action=addRiwayat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  markAsDipesan: async (idKomponen, tipeStok) => {
+    const res = await fetch(`${STOK_URL}?action=markAsDipesan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id_komponen: idKomponen, tipe_stok: tipeStok }),
+    });
+    return res.json();
   },
 };
