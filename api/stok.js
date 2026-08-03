@@ -2,6 +2,7 @@
 // Migrasi dari Google Apps Script -> Supabase
 // Menangani: stok elektrik, stok dinamo/radiator, riwayat stok, status restock
 import { createClient } from "@supabase/supabase-js";
+import { handleStockNotification, handleRecoveryNotification } from "./_lib/notify.js";
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -130,7 +131,12 @@ export default async function handler(req, res) {
           return res.status(404).json({ status: "error", message: "ID Stok tidak ditemukan: " + idStok });
         }
 
-        let stokSaatIni = stokRows[0].stok_saat_ini || 0;
+        const stokLama = stokRows[0].stok_saat_ini || 0;
+        const idKomponenStok = stokRows[0].id_komponen;
+        const batasMinimal = stokRows[0].batas_minimal || 0;
+        const namaKomponen = isElektrik ? stokRows[0].nama_komponen : stokRows[0].nama_spesifikasi_barang;
+
+        let stokSaatIni = stokLama;
         if (jenis === "Masuk") stokSaatIni += jumlah;
         else if (jenis === "Keluar") stokSaatIni = Math.max(0, stokSaatIni - jumlah);
 
@@ -151,6 +157,18 @@ export default async function handler(req, res) {
           keterangan: data.keterangan || "",
         });
         if (riwayatErr) throw riwayatErr;
+
+        const tipeStok = isElektrik ? "elektrik" : "din_rad";
+        if (jenis === "Keluar") {
+          await handleStockNotification(idKomponenStok, stokSaatIni, batasMinimal, tipeStok, namaKomponen);
+        } else if (jenis === "Masuk") {
+          await handleRecoveryNotification(idKomponenStok, stokLama, stokSaatIni, batasMinimal, tipeStok, namaKomponen);
+          // Barang sudah datang -> reset status restock kalau sebelumnya sudah dipesan
+          await supabase
+            .from("tb_status_restock")
+            .update({ status_dipesan: false, tanggal_restok: new Date().toISOString().split("T")[0] })
+            .eq("id_komponen", idKomponenStok);
+        }
 
         return res.status(200).json({ status: "success", stok_saat_ini: stokSaatIni });
       }

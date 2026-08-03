@@ -1,6 +1,7 @@
 // api/repairs.js
 // Migrasi dari Google Apps Script -> Supabase
 import { createClient } from "@supabase/supabase-js";
+import { handleStockNotification } from "./_lib/notify.js";
 
 // Pakai SERVICE_ROLE_KEY (bukan anon key) karena ini jalan di server/backend,
 // butuh akses penuh tanpa dibatasi RLS. Jangan pernah expose service role key ke frontend.
@@ -73,6 +74,8 @@ async function deductElektrikStock(idKomponen, jumlah) {
     tgl_transaksi: new Date().toISOString().split("T")[0],
     keterangan: "Auto-deduct from ticket",
   });
+
+  await handleStockNotification(idKomponen, newStok, stok.batas_minimal || 0, "elektrik", stok.nama_komponen);
 }
 
 // Kurangi stok Dinamo/Radiator -- hanya kalau kompatibilitas_unit
@@ -122,6 +125,14 @@ async function deductDinRadStock(idKomponen, jumlah, idMesin) {
     tgl_transaksi: new Date().toISOString().split("T")[0],
     keterangan: "Auto-deduct from ticket",
   });
+
+  await handleStockNotification(
+    idKomponen,
+    newStok,
+    match.batas_minimal || 0,
+    "din_rad",
+    match.nama_spesifikasi_barang
+  );
 }
 
 // Simpan komponen yang dipakai di tiket + jalankan auto-deduct stok
