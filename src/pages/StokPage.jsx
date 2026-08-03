@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, X, Search, Package, History } from "lucide-react";
+import { Plus, X, Search, Package, ArrowLeft, RefreshCw } from "lucide-react";
 import { repairsAPI } from "../api";
 
 export default function StokPage({ onBack }) {
@@ -27,7 +27,7 @@ export default function StokPage({ onBack }) {
     nama_komponen: '',
     stok_saat_ini: '',
     batas_minimal: '',
-    kompabilitas_unit: '',
+    kompatibilitas_unit: '',
     nama_spesifikasi_barang: '',
     posisi_rak: ''
   });
@@ -43,11 +43,13 @@ export default function StokPage({ onBack }) {
         repairsAPI.getStokDinRad(),
         repairsAPI.getMasterKategori()
       ]);
-      setStokElektrik(elektrik);
-      setStokDinRad(dinRad);
-      setCategories(cats);
+      const cleanElektrik = Array.isArray(elektrik) ? elektrik.filter(item => item.id_stok_elektrik || item.id_komponen || item.nama_komponen) : [];
+      const cleanDinRad = Array.isArray(dinRad) ? dinRad.filter(item => item.id_stok_din_rad || item.id_komponen || item.nama_spesifikasi_barang) : [];
+      setStokElektrik(cleanElektrik);
+      setStokDinRad(cleanDinRad);
+      setCategories(cats || []);
       
-      const uniqueUnits = [...new Set(dinRad.map(item => item.kompabilitas_unit).filter(Boolean))];
+      const uniqueUnits = [...new Set(cleanDinRad.map(item => item.kompatibilitas_unit).filter(Boolean))];
       setUnits(uniqueUnits);
     } catch (e) { console.error(e); }
   };
@@ -67,7 +69,7 @@ export default function StokPage({ onBack }) {
         nama_komponen: '',
         stok_saat_ini: '',
         batas_minimal: '',
-        kompabilitas_unit: '',
+        kompatibilitas_unit: '',
         nama_spesifikasi_barang: '',
         posisi_rak: ''
       });
@@ -164,8 +166,8 @@ export default function StokPage({ onBack }) {
           return matchSearch && matchCategory;
         })
       : stokDinRad.filter(item => {
-          const matchSearch = String(item?.nama_spesifikasi_barang || '').toLowerCase().includes(searchTerm.toLowerCase()) || String(item?.id_komponen || '').toLowerCase().includes(searchTerm.toLowerCase()) || String(item?.kompabilitas_unit || '').toLowerCase().includes(searchTerm.toLowerCase());
-          const matchUnit = unitFilter === 'all' || String(item?.kompabilitas_unit) === String(unitFilter);
+          const matchSearch = String(item?.nama_spesifikasi_barang || '').toLowerCase().includes(searchTerm.toLowerCase()) || String(item?.id_komponen || '').toLowerCase().includes(searchTerm.toLowerCase()) || String(item?.kompatibilitas_unit || '').toLowerCase().includes(searchTerm.toLowerCase());
+          const matchUnit = unitFilter === 'all' || String(item?.kompatibilitas_unit) === String(unitFilter);
           return matchSearch && matchUnit;
         });
   } catch (e) {
@@ -178,12 +180,15 @@ export default function StokPage({ onBack }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 h-16">
             <button onClick={onBack} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-              <History size={20} />
+              <ArrowLeft size={20} />
             </button>
             <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
               <Package className="text-white" size={20} />
             </div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">Stok Komponen</h1>
+            <button onClick={loadData} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <RefreshCw size={20} />
+            </button>
           </div>
         </div>
       </header>
@@ -282,7 +287,7 @@ export default function StokPage({ onBack }) {
                           <>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{item.id_stok_din_rad}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.id_komponen}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.kompabilitas_unit}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.kompatibilitas_unit}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.nama_spesifikasi_barang}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.posisi_rak}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.stok_saat_ini}</td>
@@ -336,7 +341,7 @@ export default function StokPage({ onBack }) {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kompatibilitas Unit</label>
-                    <input type="text" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={formData.kompabilitas_unit} onChange={e => setFormData({...formData, kompabilitas_unit: e.target.value})} />
+                    <input type="text" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={formData.kompatibilitas_unit} onChange={e => setFormData({...formData, kompatibilitas_unit: e.target.value})} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nama Spesifikasi Barang</label>

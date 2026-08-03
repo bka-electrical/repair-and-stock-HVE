@@ -15,17 +15,19 @@ export default function LaporanPekerjaan() {
   const [units, setUnits] = useState([]);
   const [categories, setCategories] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [mesin, setMesin] = useState([]);
   const [komponenList, setKomponenList] = useState([]);
   const [selectedKomponen, setSelectedKomponen] = useState([]);
   const [page, setPage] = useState('perbaikan'); // 'perbaikan' | 'stok'
   const [repairFormData, setRepairFormData] = useState({
-    tanggalMasuk: new Date().toISOString().split("T")[0],
-    unitAlat: "",
+    nama_unit: "",
+    id_mesin: "",
     id_kategori_sparepart: "",
     lokasiOperasi: "",
     deskripsiKerusakan: "",
     status_perbaikan: "Menunggu Pengecekan",
     catatan: "",
+    tgl_masuk: new Date().toISOString().split("T")[0],
     tgl_keluar: ""
   });
 
@@ -61,14 +63,14 @@ export default function LaporanPekerjaan() {
 
   const loadMasterData = async () => {
     try {
-      const [u, c, l] = await Promise.all([
-        repairsAPI.getMasterUnits(),
+      const [c, l, m] = await Promise.all([
         repairsAPI.getMasterKategori(),
-        repairsAPI.getMasterLocations()
+        repairsAPI.getMasterLocations(),
+        repairsAPI.getMasterMesin()
       ]);
-      setUnits(u);
       setCategories(c);
       setLocations(l);
+      setMesin(m);
     } catch (e) { console.error('Master data fail', e); }
   };
 
@@ -89,24 +91,30 @@ export default function LaporanPekerjaan() {
   const handleCreateTicket = async (e) => {
     e.preventDefault();
     try {
-      const result = await repairsAPI.create({ ...repairFormData, komponen: selectedKomponen });
+      const komponenWithJumlah = selectedKomponen.map(s => ({
+        id_komponen: s.id_komponen,
+        jumlah: parseInt(s.jumlah) || 1
+      }));
+
+      const result = await repairsAPI.create({ ...repairFormData, komponen: komponenWithJumlah });
       const newTicket = {
         ...repairFormData,
         id_perbaikan: result.id,
         status_perbaikan: 'Menunggu Pengecekan',
-        tgl_masuk: repairFormData.tanggalMasuk,
+        tgl_masuk: repairFormData.tgl_masuk,
         tgl_keluar: ''
       };
       setRepairs(prev => [newTicket, ...prev]);
       setShowRepairForm(false);
       setRepairFormData({
-        tanggalMasuk: new Date().toISOString().split("T")[0],
-        unitAlat: "",
+        nama_unit: "",
+        id_mesin: "",
         id_kategori_sparepart: "",
         lokasiOperasi: "",
         deskripsiKerusakan: "",
         status_perbaikan: "Menunggu Pengecekan",
         catatan: "",
+        tgl_masuk: new Date().toISOString().split("T")[0],
         tgl_keluar: ""
       });
       setSelectedKomponen([]);
@@ -129,16 +137,22 @@ export default function LaporanPekerjaan() {
 
   const handleUpdateTicket = async () => {
     try {
+      const komponenWithJumlah = (selectedRepair.selectedKomponen || []).map(s => ({
+        id_komponen: typeof s === 'object' ? s.id_komponen : s,
+        jumlah: typeof s === 'object' ? (parseInt(s.jumlah) || 1) : 1
+      }));
+
       const payload = {
         ...selectedRepair,
         status: selectedRepair.status_perbaikan,
         catatan: selectedRepair.catatan,
         tgl_keluar: selectedRepair.status_perbaikan === 'Selesai' ? new Date().toISOString().split('T')[0] : null,
-        komponen: selectedRepair.selectedKomponen || []
+        komponen: komponenWithJumlah,
+        nama_unit: selectedRepair.nama_unit || '',
+        id_mesin: selectedRepair.id_mesin || ''
       };
       await repairsAPI.update(payload);
       
-      // Optimistic update: update local state instead of full reload
       if (selectedRepair.status_perbaikan === 'Selesai' || selectedRepair.status_perbaikan === 'Afkir') {
         setRepairs(prev => prev.filter(r => r.id_perbaikan !== selectedRepair.id_perbaikan));
         setArchive(prev => [{
@@ -185,21 +199,25 @@ export default function LaporanPekerjaan() {
 
   const filteredRepairs = repairs.filter(repair => {
     const matchStatus = statusFilter === 'all' || repair.status_perbaikan === statusFilter;
+    const mesinData = mesin.find(m => String(m.id_mesin) === String(repair.id_mesin));
     const matchSearch = !searchTerm || 
-      repair.id_perbaikan?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repair.id_unit?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repair.lokasiOperasi?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repair.deskripsiKerusakan?.toLowerCase().includes(searchTerm.toLowerCase());
+      String(repair.id_perbaikan || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(repair.nama_unit || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(mesinData?.nama_mesin || repair.id_mesin || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(repair.lokasiOperasi || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(repair.deskripsiKerusakan || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchStatus && matchSearch;
   });
 
   const filteredArchive = archive.filter(repair => {
     const matchStatus = statusFilter === 'all' || repair.status_perbaikan === statusFilter;
+    const mesinData = mesin.find(m => String(m.id_mesin) === String(repair.id_mesin));
     const matchSearch = !searchTerm || 
-      repair.id_perbaikan?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repair.id_unit?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repair.lokasiOperasi?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repair.deskripsiKerusakan?.toLowerCase().includes(searchTerm.toLowerCase());
+      String(repair.id_perbaikan || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(repair.nama_unit || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(mesinData?.nama_mesin || repair.id_mesin || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(repair.lokasiOperasi || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(repair.deskripsiKerusakan || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchStatus && matchSearch;
   });
 
@@ -302,6 +320,7 @@ export default function LaporanPekerjaan() {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ID Tiket</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Unit</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Mesin</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Kategori</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Lokasi</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
@@ -319,9 +338,16 @@ export default function LaporanPekerjaan() {
                           </td>
                         </tr>
                       )}
+                        {groupBy !== 'none' && (
+                        <tr className="bg-gray-100 dark:bg-gray-700">
+                          <td colSpan="8" className="px-6 py-2 text-sm font-bold text-gray-700 dark:text-gray-300 uppercase">
+                            {group.label} ({group.items.length} tiket)
+                          </td>
+                        </tr>
+                      )}
                       {group.items.map(repair => {
-                        const unit = units.find(u => u.nama_unit === repair.id_unit);
                         const kategori = categories.find(c => c.nama_kategori === repair.id_kategori_sparepart);
+                        const mesinData = mesin.find(m => String(m.id_mesin) === String(repair.id_mesin));
                         const StatusIcon = statusConfig[repair.status_perbaikan]?.icon || Wrench;
                         const statusColor = statusConfig[repair.status_perbaikan]?.color || "text-gray-500";
                         return (
@@ -330,7 +356,10 @@ export default function LaporanPekerjaan() {
                               {repair.id_perbaikan}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                              {unit?.nama_unit || repair.id_unit}
+                              {repair.nama_unit || "-"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                              {mesinData?.nama_mesin || repair.id_mesin || "-"}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                               {kategori?.nama_kategori || repair.id_kategori_sparepart}
@@ -374,6 +403,7 @@ export default function LaporanPekerjaan() {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ID Tiket</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Unit</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Mesin</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Kategori</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Lokasi</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
@@ -392,8 +422,8 @@ export default function LaporanPekerjaan() {
                         </tr>
                       )}
                       {group.items.map(repair => {
-                        const unit = units.find(u => u.nama_unit === repair.id_unit);
                         const kategori = categories.find(c => c.nama_kategori === repair.id_kategori_sparepart);
+                        const mesinData = mesin.find(m => String(m.id_mesin) === String(repair.id_mesin));
                         const StatusIcon = statusConfig[repair.status_perbaikan]?.icon || CheckCircle;
                         const statusColor = statusConfig[repair.status_perbaikan]?.color || "text-gray-500";
                         return (
@@ -402,7 +432,10 @@ export default function LaporanPekerjaan() {
                               {repair.id_perbaikan}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                              {unit?.nama_unit || repair.id_unit}
+                              {repair.nama_unit || "-"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                              {mesinData?.nama_mesin || repair.id_mesin || "-"}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                               {kategori?.nama_kategori || repair.id_kategori_sparepart}
@@ -467,11 +500,15 @@ export default function LaporanPekerjaan() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Unit Alat</p>
+                  <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Nama Unit</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{selectedRepair.nama_unit || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Nama Mesin</p>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {(() => {
-                      const unit = units.find(u => String(u.id_unit) === String(selectedRepair.id_unit));
-                      return unit ? unit.nama_unit : (selectedRepair.unitAlat || selectedRepair.id_unit || "-");
+                      const m = mesin.find(item => String(item.id_mesin) === String(selectedRepair.id_mesin));
+                      return m ? m.nama_mesin : (selectedRepair.id_mesin || "-");
                     })()}
                   </p>
                 </div>
@@ -479,22 +516,51 @@ export default function LaporanPekerjaan() {
                   <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Lokasi</p>
                   <p className="font-medium text-gray-900 dark:text-white">{selectedRepair.lokasiOperasi || "-"}</p>
                 </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Kategori</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{selectedRepair.id_kategori_sparepart || "-"}</p>
+                </div>
               </div>
 
               {komponenList.length > 0 && (
                 <div>
                   <p className="text-xs font-bold text-gray-400 mb-3 uppercase">Komponen yang diganti</p>
                   <div className="space-y-2">
-                    {komponenList.map(k => (
-                      <label key={k.id_komponen} className="flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-                        <input type="checkbox" checked={selectedRepair.selectedKomponen?.includes(k.id_komponen)} onChange={e => {
-                          const current = selectedRepair.selectedKomponen || [];
-                          const updated = e.target.checked ? [...current, k.id_komponen] : current.filter(id => id !== k.id_komponen);
-                          setSelectedRepair({...selectedRepair, selectedKomponen: updated});
-                        }} className="w-4 h-4 text-indigo-600 rounded" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{k.nama_komponen}</span>
-                      </label>
-                    ))}
+                    {komponenList.map(k => {
+                      const selected = selectedRepair.selectedKomponen?.find(s => (typeof s === 'object' ? s.id_komponen : s) === k.id_komponen);
+                      const checked = !!selected;
+                      const jumlah = typeof selected === 'object' ? selected.jumlah : 1;
+                      return (
+                        <label key={k.id_komponen} className="flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                          <input type="checkbox" checked={checked} onChange={e => {
+                            const current = selectedRepair.selectedKomponen || [];
+                            const updated = e.target.checked
+                              ? [...current, { id_komponen: k.id_komponen, jumlah: 1 }]
+                              : current.filter(s => (typeof s === 'object' ? s.id_komponen : s) !== k.id_komponen);
+                            setSelectedRepair({...selectedRepair, selectedKomponen: updated});
+                          }} className="w-4 h-4 text-indigo-600 rounded" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{k.nama_komponen}</span>
+                          <input
+                            type="number"
+                            min="1"
+                            disabled={!checked}
+                            className={`w-16 p-2 border border-gray-300 dark:border-gray-600 rounded bg-slate-700 text-white text-center ${checked ? 'opacity-100' : 'opacity-50'}`}
+                            value={checked ? jumlah : ''}
+                            onChange={e => {
+                              const val = parseInt(e.target.value) || 1;
+                              setSelectedRepair(prev => ({
+                                ...prev,
+                                selectedKomponen: (prev.selectedKomponen || []).map(s =>
+                                  (typeof s === 'object' ? s.id_komponen : s) === k.id_komponen
+                                    ? { id_komponen: k.id_komponen, jumlah: Math.max(1, val) }
+                                    : s
+                                )
+                              }));
+                            }}
+                          />
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -527,59 +593,80 @@ export default function LaporanPekerjaan() {
                 <X size={24} />
               </button>
             </div>
-              <form onSubmit={handleCreateTicket} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Unit Alat</label>
-                  <select className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={repairFormData.unitAlat} onChange={e => setRepairFormData({...repairFormData, unitAlat: e.target.value})}>
-                    <option value="">Pilih Unit</option>
-                    {units.map(u => <option key={u.id_unit} value={u.nama_unit}>{u.nama_unit}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kategori Sparepart</label>
-                  <select className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={repairFormData.id_kategori_sparepart} onChange={handleKategoriChange}>
-                    <option value="">Pilih Kategori</option>
-                    {categories.map(c => <option key={c.id_kategori} value={c.nama_kategori}>{c.nama_kategori}</option>)}
-                  </select>
-                </div>
+               <form onSubmit={handleCreateTicket} className="p-6 space-y-4">
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nama Unit</label>
+                   <input type="text" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required placeholder="Contoh: EXCAVATOR 01" value={repairFormData.nama_unit} onChange={e => setRepairFormData({...repairFormData, nama_unit: e.target.value})} />
+                 </div>
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nama Mesin</label>
+                   <select className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={repairFormData.id_mesin} onChange={e => setRepairFormData({...repairFormData, id_mesin: e.target.value})}>
+                     <option value="">Pilih Mesin</option>
+                     {mesin.map(m => <option key={m.id_mesin} value={m.id_mesin}>{m.nama_mesin}</option>)}
+                   </select>
+                 </div>
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kategori Sparepart</label>
+                   <select className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={repairFormData.id_kategori_sparepart} onChange={handleKategoriChange}>
+                     <option value="">Pilih Kategori</option>
+                     {categories.map(c => <option key={c.id_kategori} value={c.nama_kategori}>{c.nama_kategori}</option>)}
+                   </select>
+                 </div>
 
-                {komponenList.length > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Komponen yang diganti</label>
-                    <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                      {komponenList.map(k => (
-                        <label key={k.id_komponen} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer">
-                          <input type="checkbox" checked={selectedKomponen.includes(k.id_komponen)} onChange={e => {
-                            const updated = e.target.checked ? [...selectedKomponen, k.id_komponen] : selectedKomponen.filter(id => id !== k.id_komponen);
-                            setSelectedKomponen(updated);
-                          }} className="w-4 h-4 text-indigo-600 rounded" />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{k.nama_komponen}</span>
-                        </label>
-                      ))}
+                  {komponenList.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Komponen yang diganti</label>
+                      <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                        {komponenList.map(k => {
+                          const selected = selectedKomponen.find(s => s.id_komponen === k.id_komponen);
+                          const checked = !!selected;
+                          return (
+                            <label key={k.id_komponen} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer">
+                              <input type="checkbox" checked={checked} onChange={e => {
+                                const updated = e.target.checked
+                                  ? [...selectedKomponen, { id_komponen: k.id_komponen, jumlah: 1 }]
+                                  : selectedKomponen.filter(s => s.id_komponen !== k.id_komponen);
+                                setSelectedKomponen(updated);
+                              }} className="w-4 h-4 text-indigo-600 rounded" />
+                              <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{k.nama_komponen}</span>
+                              <input
+                                type="number"
+                                min="1"
+                                disabled={!checked}
+                                className={`w-16 p-2 border border-gray-300 dark:border-gray-600 rounded bg-slate-700 text-white text-center ${checked ? 'opacity-100' : 'opacity-50'}`}
+                                value={selected ? selected.jumlah : ''}
+                                onChange={e => {
+                                  const val = parseInt(e.target.value) || 1;
+                                  setSelectedKomponen(prev => prev.map(s => s.id_komponen === k.id_komponen ? { ...s, jumlah: Math.max(1, val) } : s));
+                                }}
+                              />
+                            </label>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Lokasi</label>
-                  <select className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={repairFormData.lokasiOperasi} onChange={e => setRepairFormData({...repairFormData, lokasiOperasi: e.target.value})}>
-                    <option value="">Pilih Lokasi</option>
-                    {locations.map(l => <option key={l.id_lokasi} value={l.nama_lokasi}>{l.nama_lokasi}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tanggal Masuk</label>
-                  <input type="date" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={repairFormData.tanggalMasuk} onChange={e => setRepairFormData({...repairFormData, tanggalMasuk: e.target.value})} />
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <button type="button" onClick={() => { setShowRepairForm(false); setSelectedKomponen([]); setKomponenList([]); }} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-                    Batal
-                  </button>
-                  <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
-                    Buat Tiket
-                  </button>
-                </div>
-              </form>
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Lokasi</label>
+                   <select className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={repairFormData.lokasiOperasi} onChange={e => setRepairFormData({...repairFormData, lokasiOperasi: e.target.value})}>
+                     <option value="">Pilih Lokasi</option>
+                     {locations.map(l => <option key={l.id_lokasi} value={l.nama_lokasi}>{l.nama_lokasi}</option>)}
+                   </select>
+                 </div>
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tanggal Masuk</label>
+                   <input type="date" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={repairFormData.tgl_masuk} onChange={e => setRepairFormData({...repairFormData, tgl_masuk: e.target.value})} />
+                 </div>
+                 <div className="flex gap-3 pt-4">
+                   <button type="button" onClick={() => { setShowRepairForm(false); setSelectedKomponen([]); setKomponenList([]); }} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                     Batal
+                   </button>
+                   <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+                     Buat Tiket
+                   </button>
+                 </div>
+               </form>
           </div>
         </div>
       )}

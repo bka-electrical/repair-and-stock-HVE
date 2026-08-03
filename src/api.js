@@ -31,8 +31,9 @@ export const repairsAPI = {
   addStokElektrik: (data) => spreadsheetAPI.postData('addStokElektrik', data),
   addStokDinRad: (data) => spreadsheetAPI.postData('addStokDinRad', data),
   addRiwayat: (data) => spreadsheetAPI.postData('addRiwayat', data),
+  markAsDipesan: (idKomponen, tipeStok) => spreadsheetAPI.postData('markAsDipesan', { id_komponen: idKomponen, tipe_stok: tipeStok }),
   getComponents: (idKategori) => spreadsheetAPI.fetchData('getComponents', { id_kategori: idKategori }),
   getSelectedComponents: (idPerbaikan) => spreadsheetAPI.fetchData('getSelectedComponents', { id_perbaikan: idPerbaikan }),
-  getMasterUnits: () => spreadsheetAPI.fetchData('getUnits'),
-  getMasterLocations: () => spreadsheetAPI.fetchData('getLocations')
+  getMasterLocations: () => spreadsheetAPI.fetchData('getLocations'),
+  getMasterMesin: () => spreadsheetAPI.fetchData('getMesin')
 };
