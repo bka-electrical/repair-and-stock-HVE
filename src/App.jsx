@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Plus, X, RefreshCw, Wrench, Package, CheckCircle, Search, ArrowLeft } from "lucide-react";
 import { repairsAPI } from "./api";
 import StokPage from "./pages/StokPage";
+import DashboardPage from "./pages/DashboardPage";
+import TerkirimPage from "./pages/TerkirimPage";
 
 export default function LaporanPekerjaan() {
   const [repairs, setRepairs] = useState([]);
@@ -18,7 +20,9 @@ export default function LaporanPekerjaan() {
   const [mesin, setMesin] = useState([]);
   const [komponenList, setKomponenList] = useState([]);
   const [selectedKomponen, setSelectedKomponen] = useState([]);
-  const [page, setPage] = useState('perbaikan'); // 'perbaikan' | 'stok'
+  const [komponenLoading, setKomponenLoading] = useState(false);
+  const komponenLoadIdRef = useRef(0);
+  const [page, setPage] = useState('dashboard'); // 'dashboard' | 'perbaikan' | 'stok' | 'terkirim'
   const [repairFormData, setRepairFormData] = useState({
     nama_unit: "",
     id_mesin: "",
@@ -31,13 +35,6 @@ export default function LaporanPekerjaan() {
     tgl_keluar: ""
   });
 
-  // Theme state
-  const THEME_KEY = "theme";
-  const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem(THEME_KEY) || "system"; } 
-    catch (e) { return "system"; }
-  });
-
   useEffect(() => {
     loadQueue();
     loadMasterData();
@@ -46,20 +43,6 @@ export default function LaporanPekerjaan() {
   useEffect(() => {
     if (view === 'archive') loadArchive();
   }, [view]);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    const apply = (t) => {
-      if (t === "system") {
-        const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-        root.classList.toggle("dark", prefersDark);
-      } else {
-        root.classList.toggle("dark", t === "dark");
-      }
-    };
-    apply(theme);
-    try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
-  }, [theme]);
 
   const loadMasterData = async () => {
     try {
@@ -86,6 +69,24 @@ export default function LaporanPekerjaan() {
       const data = await repairsAPI.getArchive();
       setArchive(data);
     } catch (error) { console.error(error); }
+  };
+
+  const navigateToRepair = () => {
+    setView('active');
+    setPage('perbaikan');
+  };
+
+  const navigateToStock = () => {
+    setPage('stok');
+  };
+
+  const navigateToArchive = () => {
+    setView('archive');
+    setPage('perbaikan');
+  };
+
+  const navigateToTerkirim = () => {
+    setPage('terkirim');
   };
 
   const handleCreateTicket = async (e) => {
@@ -127,11 +128,23 @@ export default function LaporanPekerjaan() {
     setRepairFormData({ ...repairFormData, id_kategori_sparepart: kategori });
     setSelectedKomponen([]);
     setKomponenList([]);
+    setKomponenLoading(false);
+
     if (kategori) {
+      setKomponenLoading(true);
+      const loadId = ++komponenLoadIdRef.current;
       try {
+        await new Promise((resolve) => setTimeout(resolve, 400));
         const comps = await repairsAPI.getComponents(kategori);
+        if (komponenLoadIdRef.current !== loadId) return;
         setKomponenList(comps);
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (komponenLoadIdRef.current === loadId) {
+          setKomponenLoading(false);
+        }
+      }
     }
   };
 
@@ -243,27 +256,39 @@ export default function LaporanPekerjaan() {
 
   return (
     <>
+    {page === 'dashboard' && (
+      <DashboardPage
+        activeRepairs={repairs}
+        archiveRepairs={archive}
+        onNavigateRepair={navigateToRepair}
+        onNavigateStock={navigateToStock}
+        onNavigateArchive={navigateToArchive}
+        onNavigateTerkirim={navigateToTerkirim}
+      />
+    )}
     {page === 'perbaikan' && (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header with original style */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <header className="bg-slate-900/95 border-b border-slate-800 shadow-sm">
+        <div className="w-[80vw] max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between h-20">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                <Wrench className="text-white" size={20} />
+              <div className="w-10 h-10 rounded-3xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <Wrench className="text-white" size={18} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Sistem Servis Bengkel</h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Monitoring Perbaikan</p>
+                <h1 className="text-xl font-bold text-white">Sistem Servis Bengkel</h1>
+                <p className="text-sm text-slate-400">Pantau tiket, status, dan antrean layanan.</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <button onClick={loadQueue} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                <RefreshCw size={20} />
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={() => setPage('dashboard')} className="rounded-full border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm font-medium text-slate-100 hover:bg-slate-800">
+                Kembali
               </button>
-              <button onClick={() => setShowRepairForm(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
-                <Plus size={20} />
+              <button onClick={loadQueue} className="inline-flex h-10 items-center justify-center rounded-full border border-slate-700 bg-slate-900/80 px-3 py-2 text-slate-100 hover:bg-slate-800">
+                <RefreshCw size={16} />
+              </button>
+              <button onClick={() => setShowRepairForm(true)} className="inline-flex h-10 items-center justify-center rounded-full bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950 shadow-md shadow-emerald-500/20 hover:bg-emerald-400">
+                <Plus size={16} />
                 Perbaikan Baru
               </button>
             </div>
@@ -271,76 +296,74 @@ export default function LaporanPekerjaan() {
         </div>
       </header>
 
-      {/* Main Content - Keep original layout style */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* View Tabs */}
-        <div className="flex gap-2 mb-6">
-          <button onClick={() => setView('active')} className={`px-4 py-2 rounded-lg font-medium ${view === 'active' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border'}`}>Antrean Aktif</button>
-          <button onClick={() => setView('archive')} className={`px-4 py-2 rounded-lg font-medium ${view === 'archive' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border'}`}>Riwayat</button>
-        </div>
-
-        {/* Search & Filter */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <input type="text" placeholder="Cari ID tiket, unit, kategori, lokasi..." className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-            </div>
+      <main className="w-[80vw] max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-1 flex gap-1 shadow-sm shadow-black/20">
+            <button onClick={() => setView('active')} className={`rounded-3xl px-4 py-3 text-sm font-semibold transition ${view === 'active' ? 'bg-emerald-500 text-slate-950 shadow-inner shadow-emerald-500/20' : 'bg-transparent text-slate-200 hover:text-white'}`}>
+              Antrean Aktif
+            </button>
+            <button onClick={() => setView('archive')} className={`rounded-3xl px-4 py-3 text-sm font-semibold transition ${view === 'archive' ? 'bg-emerald-500 text-slate-950 shadow-inner shadow-emerald-500/20' : 'bg-transparent text-slate-200 hover:text-white'}`}>
+              Riwayat
+            </button>
+          </div>
+          <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-4 flex items-center justify-between text-sm text-slate-300 min-w-[220px]">
             <div>
-              <select className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-                <option value="all">Semua Status</option>
-                <option value="Menunggu Pengecekan">Menunggu Pengecekan</option>
-                <option value="Dalam Pengerjaan">Dalam Pengerjaan</option>
-                <option value="Menunggu Sparepart">Menunggu Sparepart</option>
-                <option value="Selesai">Selesai</option>
-                <option value="Afkir">Afkir</option>
-              </select>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-400">Tiket Aktif</p>
+              <p className="mt-2 text-2xl font-bold text-white">{repairs.length}</p>
             </div>
-            <div>
-              <select className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={groupBy} onChange={e => setGroupBy(e.target.value)}>
-                <option value="none">Tidak Dikelompokkan</option>
-                <option value="id_perbaikan">Kelompokkan: ID Tiket</option>
-                <option value="id_kategori_sparepart">Kelompokkan: Kategori</option>
-                <option value="lokasiOperasi">Kelompokkan: Lokasi</option>
-              </select>
-            </div>
+            <div className="rounded-full bg-emerald-500/10 px-3 py-2 text-emerald-300 text-xs">Live</div>
           </div>
         </div>
 
-        {/* Active Queue Table */}
+        <div className="bg-slate-900/90 rounded-3xl border border-slate-800 shadow-sm p-5">
+          <div className="mb-4">
+            <p className="text-sm font-semibold text-slate-100">Cari Tiket</p>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <input type="text" placeholder="Cari ID tiket, unit, kategori, lokasi..." className="w-full rounded-3xl border border-slate-800 bg-slate-950/80 p-3 text-slate-100 placeholder:text-slate-500 shadow-inner shadow-black/10" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+            <select className="w-full rounded-3xl border border-slate-800 bg-slate-950/80 p-3 text-slate-100" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="all">Semua Status</option>
+              <option value="Menunggu Pengecekan">Menunggu Pengecekan</option>
+              <option value="Dalam Pengerjaan">Dalam Pengerjaan</option>
+              <option value="Menunggu Sparepart">Menunggu Sparepart</option>
+              <option value="Selesai">Selesai</option>
+              <option value="Afkir">Afkir</option>
+            </select>
+            <select className="w-full rounded-3xl border border-slate-800 bg-slate-950/80 p-3 text-slate-100" value={groupBy} onChange={e => setGroupBy(e.target.value)}>
+              <option value="none">Tidak Dikelompokkan</option>
+              <option value="id_perbaikan">Kelompokkan: ID Tiket</option>
+              <option value="id_kategori_sparepart">Kelompokkan: Kategori</option>
+              <option value="lokasiOperasi">Kelompokkan: Lokasi</option>
+            </select>
+          </div>
+        </div>
+
         {view === 'active' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Antrean Aktif</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Tiket perbaikan yang sedang dalam proses</p>
+          <div className="bg-slate-900/90 rounded-3xl border border-slate-800 shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-800 bg-slate-950/80">
+              <h2 className="text-lg font-semibold text-white">Antrean Aktif</h2>
+              <p className="text-sm text-slate-400">Tiket perbaikan yang sedang dalam proses</p>
             </div>
-            
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700">
+              <table className="min-w-full divide-y divide-slate-800">
+                <thead className="bg-slate-950/90 text-slate-400">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ID Tiket</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Unit</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Mesin</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Kategori</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Lokasi</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Tanggal Masuk</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Aksi</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">ID Tiket</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Unit</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Mesin</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Kategori</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Lokasi</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Tanggal Masuk</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium uppercase">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-slate-950 divide-y divide-slate-800">
                   {groupedRepairs.map(group => (
                     <React.Fragment key={group.key}>
                       {groupBy !== 'none' && (
-                        <tr className="bg-gray-100 dark:bg-gray-700">
-                          <td colSpan="7" className="px-6 py-2 text-sm font-bold text-gray-700 dark:text-gray-300 uppercase">
-                            {group.label} ({group.items.length} tiket)
-                          </td>
-                        </tr>
-                      )}
-                        {groupBy !== 'none' && (
-                        <tr className="bg-gray-100 dark:bg-gray-700">
-                          <td colSpan="8" className="px-6 py-2 text-sm font-bold text-gray-700 dark:text-gray-300 uppercase">
+                        <tr className="bg-slate-900">
+                          <td colSpan="8" className="px-6 py-2 text-sm font-semibold uppercase text-slate-300">
                             {group.label} ({group.items.length} tiket)
                           </td>
                         </tr>
@@ -349,35 +372,17 @@ export default function LaporanPekerjaan() {
                         const kategori = categories.find(c => c.nama_kategori === repair.id_kategori_sparepart);
                         const mesinData = mesin.find(m => String(m.id_mesin) === String(repair.id_mesin));
                         const StatusIcon = statusConfig[repair.status_perbaikan]?.icon || Wrench;
-                        const statusColor = statusConfig[repair.status_perbaikan]?.color || "text-gray-500";
+                        const statusColor = statusConfig[repair.status_perbaikan]?.color || "text-slate-300";
                         return (
-                          <tr key={repair.id_perbaikan} className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" onClick={() => handleCardClick(repair)}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                              {repair.id_perbaikan}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                              {repair.nama_unit || "-"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                              {mesinData?.nama_mesin || repair.id_mesin || "-"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                              {kategori?.nama_kategori || repair.id_kategori_sparepart}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                              {repair.lokasiOperasi || "-"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor} bg-gray-100 dark:bg-gray-700`}>
-                                <StatusIcon size={12} />
-                                {repair.status_perbaikan}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                              {repair.tgl_masuk ? new Date(repair.tgl_masuk).toLocaleDateString("id-ID") : "-"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            </td>
+                          <tr key={repair.id_perbaikan} className="hover:bg-slate-900/80 cursor-pointer" onClick={() => handleCardClick(repair)}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{repair.id_perbaikan}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{repair.nama_unit || "-"}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{mesinData?.nama_mesin || repair.id_mesin || "-"}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{kategori?.nama_kategori || repair.id_kategori_sparepart}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{repair.lokasiOperasi || "-"}</td>
+                            <td className="px-6 py-4 whitespace-nowrap"><span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${statusColor} bg-slate-800`}>{<StatusIcon size={12} />} {repair.status_perbaikan}</span></td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{repair.tgl_masuk ? new Date(repair.tgl_masuk).toLocaleDateString("id-ID") : "-"}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-emerald-400">Lihat</td>
                           </tr>
                         );
                       })}
@@ -389,34 +394,32 @@ export default function LaporanPekerjaan() {
           </div>
         )}
 
-        {/* Archive Table */}
         {view === 'archive' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Riwayat Perbaikan</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Tiket yang sudah selesai atau di-afkir</p>
+          <div className="bg-slate-900/90 rounded-3xl border border-slate-800 shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-800 bg-slate-950/80">
+              <h2 className="text-lg font-semibold text-white">Riwayat Perbaikan</h2>
+              <p className="text-sm text-slate-400">Tiket yang sudah selesai atau di-afkir</p>
             </div>
-            
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700">
+              <table className="min-w-full divide-y divide-slate-800">
+                <thead className="bg-slate-950/90 text-slate-400">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ID Tiket</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Unit</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Mesin</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Kategori</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Lokasi</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Tanggal Masuk</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Tanggal Keluar</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">ID Tiket</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Unit</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Mesin</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Kategori</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Lokasi</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Tanggal Masuk</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Tanggal Keluar</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-slate-950 divide-y divide-slate-800">
                   {groupedArchive.map(group => (
                     <React.Fragment key={group.key}>
                       {groupBy !== 'none' && (
-                        <tr className="bg-gray-100 dark:bg-gray-700">
-                          <td colSpan="7" className="px-6 py-2 text-sm font-bold text-gray-700 dark:text-gray-300 uppercase">
+                        <tr className="bg-slate-900">
+                          <td colSpan="8" className="px-6 py-2 text-sm font-semibold uppercase text-slate-300">
                             {group.label} ({group.items.length} tiket)
                           </td>
                         </tr>
@@ -425,36 +428,17 @@ export default function LaporanPekerjaan() {
                         const kategori = categories.find(c => c.nama_kategori === repair.id_kategori_sparepart);
                         const mesinData = mesin.find(m => String(m.id_mesin) === String(repair.id_mesin));
                         const StatusIcon = statusConfig[repair.status_perbaikan]?.icon || CheckCircle;
-                        const statusColor = statusConfig[repair.status_perbaikan]?.color || "text-gray-500";
+                        const statusColor = statusConfig[repair.status_perbaikan]?.color || "text-slate-300";
                         return (
-                          <tr key={repair.id_perbaikan} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                              {repair.id_perbaikan}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                              {repair.nama_unit || "-"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                              {mesinData?.nama_mesin || repair.id_mesin || "-"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                              {kategori?.nama_kategori || repair.id_kategori_sparepart}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                              {repair.lokasiOperasi || "-"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor} bg-gray-100 dark:bg-gray-700`}>
-                                <StatusIcon size={12} />
-                                {repair.status_perbaikan}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                              {repair.tgl_masuk ? new Date(repair.tgl_masuk).toLocaleDateString("id-ID") : "-"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                              {repair.tgl_keluar ? new Date(repair.tgl_keluar).toLocaleDateString("id-ID") : "-"}
-                            </td>
+                          <tr key={repair.id_perbaikan} className="hover:bg-slate-900/80">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{repair.id_perbaikan}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{repair.nama_unit || "-"}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{mesinData?.nama_mesin || repair.id_mesin || "-"}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{kategori?.nama_kategori || repair.id_kategori_sparepart}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{repair.lokasiOperasi || "-"}</td>
+                            <td className="px-6 py-4 whitespace-nowrap"><span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${statusColor} bg-slate-800`}>{<StatusIcon size={12} />} {repair.status_perbaikan}</span></td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{repair.tgl_masuk ? new Date(repair.tgl_masuk).toLocaleDateString("id-ID") : "-"}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{repair.tgl_keluar ? new Date(repair.tgl_keluar).toLocaleDateString("id-ID") : "-"}</td>
                           </tr>
                         );
                       })}
@@ -586,14 +570,14 @@ export default function LaporanPekerjaan() {
       {/* Create Ticket Modal */}
       {showRepairForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[calc(100vh-4rem)] overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Tiket Perbaikan Baru</h2>
               <button onClick={() => setShowRepairForm(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                 <X size={24} />
               </button>
             </div>
-               <form onSubmit={handleCreateTicket} className="p-6 space-y-4">
+               <form onSubmit={handleCreateTicket} className="p-6 space-y-4 overflow-y-auto max-h-[calc(100vh-12rem)]">
                  <div>
                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nama Unit</label>
                    <input type="text" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required placeholder="Contoh: EXCAVATOR 01" value={repairFormData.nama_unit} onChange={e => setRepairFormData({...repairFormData, nama_unit: e.target.value})} />
@@ -613,36 +597,42 @@ export default function LaporanPekerjaan() {
                    </select>
                  </div>
 
-                  {komponenList.length > 0 && (
+                  {(komponenLoading || komponenList.length > 0) && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Komponen yang diganti</label>
                       <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                        {komponenList.map(k => {
-                          const selected = selectedKomponen.find(s => s.id_komponen === k.id_komponen);
-                          const checked = !!selected;
-                          return (
-                            <label key={k.id_komponen} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer">
-                              <input type="checkbox" checked={checked} onChange={e => {
-                                const updated = e.target.checked
-                                  ? [...selectedKomponen, { id_komponen: k.id_komponen, jumlah: 1 }]
-                                  : selectedKomponen.filter(s => s.id_komponen !== k.id_komponen);
-                                setSelectedKomponen(updated);
-                              }} className="w-4 h-4 text-indigo-600 rounded" />
-                              <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{k.nama_komponen}</span>
-                              <input
-                                type="number"
-                                min="1"
-                                disabled={!checked}
-                                className={`w-16 p-2 border border-gray-300 dark:border-gray-600 rounded bg-slate-700 text-white text-center ${checked ? 'opacity-100' : 'opacity-50'}`}
-                                value={selected ? selected.jumlah : ''}
-                                onChange={e => {
-                                  const val = parseInt(e.target.value) || 1;
-                                  setSelectedKomponen(prev => prev.map(s => s.id_komponen === k.id_komponen ? { ...s, jumlah: Math.max(1, val) } : s));
-                                }}
-                              />
-                            </label>
-                          );
-                        })}
+                        {komponenLoading ? (
+                          <div className="flex items-center justify-center py-10 text-sm text-gray-500 dark:text-gray-400">
+                            Memuat komponen...
+                          </div>
+                        ) : (
+                          komponenList.map(k => {
+                            const selected = selectedKomponen.find(s => s.id_komponen === k.id_komponen);
+                            const checked = !!selected;
+                            return (
+                              <label key={k.id_komponen} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer">
+                                <input type="checkbox" checked={checked} onChange={e => {
+                                  const updated = e.target.checked
+                                    ? [...selectedKomponen, { id_komponen: k.id_komponen, jumlah: 1 }]
+                                    : selectedKomponen.filter(s => s.id_komponen !== k.id_komponen);
+                                  setSelectedKomponen(updated);
+                                }} className="w-4 h-4 text-indigo-600 rounded" />
+                                <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{k.nama_komponen}</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  disabled={!checked}
+                                  className={`w-16 p-2 border border-gray-300 dark:border-gray-600 rounded bg-slate-700 text-white text-center ${checked ? 'opacity-100' : 'opacity-50'}`}
+                                  value={selected ? selected.jumlah : ''}
+                                  onChange={e => {
+                                    const val = parseInt(e.target.value) || 1;
+                                    setSelectedKomponen(prev => prev.map(s => s.id_komponen === k.id_komponen ? { ...s, jumlah: Math.max(1, val) } : s));
+                                  }}
+                                />
+                              </label>
+                            );
+                          })
+                        )}
                       </div>
                     </div>
                   )}
@@ -673,18 +663,24 @@ export default function LaporanPekerjaan() {
     </div>
   )}
   {page === 'stok' && (
-      <StokPage onBack={() => setPage('perbaikan')} />
+      <StokPage onBack={() => setPage('dashboard')} />
     )}
 
-    <button
-      onClick={() => setPage(page === 'stok' ? 'perbaikan' : 'stok')}
-      className={`fixed bottom-6 left-6 z-40 rounded-full shadow-lg px-5 py-3 flex items-center gap-2 font-medium transition-colors ${
-        page === 'stok' ? 'bg-emerald-700 text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-      }`}
-    >
-      <Package size={20} />
-      {page === 'stok' ? 'Kembali' : 'Stok'}
-    </button>
+    {page === 'terkirim' && (
+      <TerkirimPage onBack={() => setPage('dashboard')} />
+    )}
+
+    {page !== 'dashboard' && (
+      <button
+        onClick={() => setPage(page === 'stok' ? 'perbaikan' : 'stok')}
+        className={`fixed bottom-6 left-6 z-40 rounded-full shadow-lg px-5 py-3 flex items-center gap-2 font-medium transition-colors ${
+          page === 'stok' ? 'bg-emerald-700 text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+        }`}
+      >
+        <Package size={20} />
+        {page === 'stok' ? 'Kembali' : 'Stok'}
+      </button>
+    )}
   </>
 );
 }

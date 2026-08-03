@@ -175,71 +175,76 @@ export default function StokPage({ onBack }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3 h-16">
-            <button onClick={onBack} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-              <ArrowLeft size={20} />
-            </button>
-            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-              <Package className="text-white" size={20} />
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <header className="bg-slate-900/95 border-b border-slate-800 shadow-sm">
+        <div className="w-[80vw] max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between h-24">
+            <div className="flex items-center gap-4">
+              <button onClick={onBack} className="rounded-full border border-slate-700 bg-slate-900/80 p-3 text-slate-200 hover:bg-slate-800">
+                <ArrowLeft size={20} />
+              </button>
+              <div className="w-12 h-12 rounded-3xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <Package className="text-white" size={22} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white">Stok Komponen</h1>
+                <p className="text-sm text-slate-400">Pantau stok dan riwayat transaksi komponen.</p>
+              </div>
             </div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Stok Komponen</h1>
-            <button onClick={loadData} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-              <RefreshCw size={20} />
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <button onClick={loadData} className="inline-flex h-11 items-center justify-center rounded-full border border-slate-700 bg-slate-900/80 px-4 py-2 text-slate-200 hover:bg-slate-800">
+                <RefreshCw size={18} />
+              </button>
+              <button onClick={() => setShowModal(true)} className="inline-flex h-11 items-center justify-center rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400">
+                <Plus size={18} />
+                Input Stok Baru
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6">
-          <button onClick={() => setActiveTab('elektrik')} className={`px-4 py-2 rounded-lg font-medium ${activeTab === 'elektrik' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border'}`}>
-            Stok Elektrik
-          </button>
-          <button onClick={() => setActiveTab('dinrad')} className={`px-4 py-2 rounded-lg font-medium ${activeTab === 'dinrad' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border'}`}>
-            Stok Dinamo/Radiator
-          </button>
-        </div>
-
-        {/* Search & Filter */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-                <input type="text" placeholder="Cari nama komponen..." className="w-full pl-10 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-              </div>
-            </div>
-            {activeTab === 'elektrik' && (
-              <div>
-                <select className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
-                  <option value="all">Semua Kategori</option>
-                  {categories.map(c => <option key={c.id_kategori} value={c.id_kategori}>{c.nama_kategori}</option>)}
-                </select>
-              </div>
-            )}
-            {activeTab === 'dinrad' && (
-              <div>
-                <select className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={unitFilter} onChange={e => setUnitFilter(e.target.value)}>
-                  <option value="all">Semua Unit</option>
-                  {units.map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
-              </div>
-            )}
-            <button onClick={() => setShowModal(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
-              <Plus size={20} /> Input Stok Baru
+      <main className="w-[80vw] max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-1 flex gap-1 shadow-sm shadow-black/20">
+            <button onClick={() => setActiveTab('elektrik')} className={`relative rounded-3xl px-5 py-3 text-sm font-semibold transition ${activeTab === 'elektrik' ? 'bg-emerald-500 text-slate-950 shadow-inner shadow-emerald-500/20' : 'bg-transparent text-slate-200 hover:text-white'}`}>
+              Stok Elektrik
             </button>
+            <button onClick={() => setActiveTab('dinrad')} className={`relative rounded-3xl px-5 py-3 text-sm font-semibold transition ${activeTab === 'dinrad' ? 'bg-emerald-500 text-slate-950 shadow-inner shadow-emerald-500/20' : 'bg-transparent text-slate-200 hover:text-white'}`}>
+              Stok Dinamo/Radiator
+            </button>
+          </div>
+          <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-4 text-slate-300">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-emerald-400">Data Stok</p>
+            <p className="mt-2 text-xl font-semibold text-white">{filteredStok.length} item</p>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-slate-900/90 rounded-3xl border border-slate-800 shadow-sm p-6">
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-4 top-4 text-slate-500" size={20} />
+              <input type="text" placeholder="Cari nama komponen..." className="w-full rounded-3xl border border-slate-800 bg-slate-950/80 py-4 pl-12 pr-4 text-slate-100 placeholder:text-slate-500 shadow-inner shadow-black/20" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+            </div>
+            {activeTab === 'elektrik' && (
+              <select className="rounded-3xl border border-slate-800 bg-slate-950/80 py-4 px-4 text-slate-100" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
+                <option value="all">Semua Kategori</option>
+                {categories.map(c => <option key={c.id_kategori} value={c.id_kategori}>{c.nama_kategori}</option>)}
+              </select>
+            )}
+            {activeTab === 'dinrad' && (
+              <select className="rounded-3xl border border-slate-800 bg-slate-950/80 py-4 px-4 text-slate-100" value={unitFilter} onChange={e => setUnitFilter(e.target.value)}>
+                <option value="all">Semua Unit</option>
+                {units.map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-slate-900/90 rounded-3xl border border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
+            <table className="min-w-full divide-y divide-slate-800">
+              <thead className="bg-slate-950/90 text-slate-300">
                 <tr>
                   {activeTab === 'elektrik' ? (
                     <>
@@ -257,23 +262,23 @@ export default function StokPage({ onBack }) {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Kompatibilitas Unit</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nama Spesifikasi</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Posisi Rak</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Stok</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Batas Min</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase">Stok</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase">Batas Min</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase">Status</th>
                     </>
                   )}
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="bg-slate-950 divide-y divide-slate-800">
                 {filteredStok.length === 0 ? (
                   <tr>
-                    <td colSpan={activeTab === 'elektrik' ? 6 : 8} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">Belum ada data stok</td>
+                    <td colSpan={activeTab === 'elektrik' ? 6 : 8} className="px-6 py-12 text-center text-slate-500">Belum ada data stok</td>
                   </tr>
                 ) : (
                   filteredStok.map(item => {
                     const badge = getStatusBadge(item.stok_saat_ini, item.batas_minimal);
                     return (
-                      <tr key={item.id_stok_elektrik || item.id_stok_din_rad} className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" onClick={() => handleRowClick(item)}>
+                      <tr key={item.id_stok_elektrik || item.id_stok_din_rad} className="hover:bg-slate-900/80 cursor-pointer" onClick={() => handleRowClick(item)}>
                         {activeTab === 'elektrik' ? (
                           <>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{item.id_stok_elektrik}</td>
