@@ -1,10 +1,14 @@
 // api/repairs.js
 // Migrasi dari Google Apps Script -> Supabase
-import { getSupabase } from "./_lib/supabase.js";
+import { createClient } from "@supabase/supabase-js";
 import { handleStockNotification } from "./_lib/notify.js";
-import { getCorsHeaders, sanitizeError } from "./_lib/helpers.js";
 
-const supabase = getSupabase();
+// Pakai SERVICE_ROLE_KEY (bukan anon key) karena ini jalan di server/backend,
+// butuh akses penuh tanpa dibatasi RLS. Jangan pernah expose service role key ke frontend.
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 const CATEGORY_PREFIX = {
   "dinamo amper": "DA",
@@ -12,6 +16,7 @@ const CATEGORY_PREFIX = {
   "radiator": "RD",
   "elektrik spil": "SPIL",
   "elektrik maker": "MAKER",
+  "accu": "ACCU",
 };
 
 function getCategoryPrefix(namaKategori) {
@@ -20,32 +25,31 @@ function getCategoryPrefix(namaKategori) {
   return CATEGORY_PREFIX[key] || "TIK";
 }
 
+// Generate ID tiket, format: DA-001, RD-002, dst
 async function generateTicketId(prefix) {
-  const pattern = prefix + "-%";
   const { data, error } = await supabase
     .from("tb_perbaikan")
     .select("id_perbaikan")
-    .ilike("id_perbaikan", pattern);
-
+    .like("id_perbaikan", `${prefix}-%`);
   if (error) throw error;
-
-  let maxSeq = 0;
-  (data || []).forEach((row) => {
-    const parts = String(row.id_perbaikan).split("-");
-    const num = parseInt(parts[1], 10);
-    if (!isNaN(num) && num > maxSeq) maxSeq = num;
-  });
-
-  const nextSeq = String(maxSeq + 1).padStart(4, "0");
-  return `${prefix}-${nextSeq}`;
+  const count = (data || []).length + 1;
+  return `${prefix}-${String(count).padStart(3, "0")}`;
 }
 
+// Generate ID riwayat stok, format: RSTE-001 (elektrik) / RSDR-001 (dinamo/radiator)
 async function generateRiwayatId(isElektrik) {
+  const table = isElektrik ? "tb_riwayat_elektrik" : "tb_riwayat_din_rad";
   const prefix = isElektrik ? "RSTE" : "RSDR";
-  const unique = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  return `${prefix}-${unique}`.slice(0, 20);
+  const { data, error } = await supabase
+    .from(table)
+    .select("id_riwayat")
+    .like("id_riwayat", `${prefix}-%`);
+  if (error) throw error;
+  const count = (data || []).length + 1;
+  return `${prefix}-${String(count).padStart(3, "0")}`;
 }
 
+// Kurangi stok elektrik + catat riwayat (Keluar)
 async function deductElektrikStock(idKomponen, jumlah) {
   const { data: stokRows } = await supabase
     .from("tb_stok_elektrik")
@@ -75,6 +79,8 @@ async function deductElektrikStock(idKomponen, jumlah) {
   await handleStockNotification(idKomponen, newStok, stok.batas_minimal || 0, "elektrik", stok.nama_komponen);
 }
 
+// Kurangi stok Dinamo/Radiator -- hanya kalau kompatibilitas_unit
+// cocok dengan nama mesin, atau bertanda 'UNIVERSAL'
 async function deductDinRadStock(idKomponen, jumlah, idMesin) {
   let namaMesin = "";
   if (idMesin) {
@@ -130,12 +136,20 @@ async function deductDinRadStock(idKomponen, jumlah, idMesin) {
   );
 }
 
+// Simpan komponen yang dipakai di tiket + jalankan auto-deduct stok
+// sesuai tipe_stok kategori (diambil dari tb_kategori_sparepart, bukan tebak nama)
 async function processKomponen(idPerbaikan, komponenList, idKategoriSparepart, idMesin) {
   if (!Array.isArray(komponenList)) return;
 
-  const kategoriName = String(idKategoriSparepart || "").toLowerCase();
-  const isElektrik = kategoriName.includes("elektrik");
-  const isDinRad = kategoriName.includes("dinamo") || kategoriName.includes("radiator");
+  const { data: kategoriRows } = await supabase
+    .from("tb_kategori_sparepart")
+    .select("tipe_stok")
+    .eq("nama_kategori", idKategoriSparepart)
+    .limit(1);
+
+  const tipeStok = kategoriRows && kategoriRows.length > 0 ? kategoriRows[0].tipe_stok : null;
+  const isElektrik = tipeStok === "elektrik";
+  const isDinRad = tipeStok === "din_rad";
 
   for (const comp of komponenList) {
     const jumlah = parseInt(comp.jumlah) || 1;
@@ -154,13 +168,44 @@ async function processKomponen(idPerbaikan, komponenList, idKategoriSparepart, i
   }
 }
 
-export default async function handler(req, res) {
-  const corsHeaders = getCorsHeaders(req);
-  Object.entries(corsHeaders).forEach(([k, v]) => res.setHeader(k, v));
+// Simpan baris tb_accu (id_accu = id_perbaikan), khusus kategori "Accu"
+async function insertAccuRecord(idPerbaikan, komponenList, riwayatNoKabel, riwayatSekun) {
+  if (!Array.isArray(komponenList) || komponenList.length === 0) return;
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
+  const namaKabel = [];
+  const namaSekun = [];
+
+  for (const comp of komponenList) {
+    const { data: rows } = await supabase
+      .from("tb_komponen_detail")
+      .select("id_komponen, nama_komponen")
+      .eq("id_komponen", comp.id_komponen)
+      .limit(1);
+    if (!rows || rows.length === 0) continue;
+
+    const idKomponen = String(rows[0].id_komponen || "");
+    if (idKomponen.startsWith("ACU-K")) {
+      namaKabel.push(rows[0].nama_komponen);
+    } else if (idKomponen.startsWith("ACU-S")) {
+      namaSekun.push(rows[0].nama_komponen);
+    }
   }
+
+  await supabase.from("tb_accu").insert({
+    id_accu: idPerbaikan,
+    jenis_kabel: namaKabel.join(", "),
+    jenis_sekun: namaSekun.join(", "),
+    riwayat_no_kabel: riwayatNoKabel || "",
+    riwayat_sekun: riwayatSekun || "",
+  });
+}
+
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
     const { method } = req;
@@ -168,6 +213,7 @@ export default async function handler(req, res) {
     if (method === "GET") {
       const { action, id_kategori, id_perbaikan } = req.query;
 
+      // Master data
       if (action === "getKategori") {
         const { data, error } = await supabase.from("tb_kategori_sparepart").select("*");
         if (error) throw error;
@@ -187,25 +233,12 @@ export default async function handler(req, res) {
       }
 
       if (action === "getComponents") {
-        const { data: kategoriRows, error: kategoriError } = await supabase
-          .from("tb_kategori_sparepart")
-          .select("id_kategori")
-          .eq("nama_kategori", id_kategori)
-          .limit(1);
-
-        if (kategoriError || !kategoriRows || kategoriRows.length === 0) {
-          return res.status(200).json({ success: true, data: [] });
-        }
-
-        const idKategoriNum = kategoriRows[0].id_kategori;
-
         const { data, error } = await supabase
           .from("tb_komponen_detail")
           .select("*")
-          .eq("id_kategori", idKategoriNum);
-
+          .eq("id_kategori", id_kategori);
         if (error) throw error;
-        return res.status(200).json({ success: true, data: data || [] });
+        return res.status(200).json({ success: true, data });
       }
 
       if (action === "getSelectedComponents") {
@@ -226,15 +259,13 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, data });
       }
 
+      // Default: antrean aktif (bukan Selesai/Afkir)
       const { data, error } = await supabase
         .from("tb_perbaikan")
-        .select("*");
+        .select("*")
+        .not("status_perbaikan", "in", '("Selesai","Afkir")');
       if (error) throw error;
-      const active = (data || []).filter((r) => {
-        const s = String(r.status_perbaikan || "");
-        return s !== "Selesai" && s !== "Afkir";
-      });
-      return res.status(200).json({ success: true, data: active });
+      return res.status(200).json({ success: true, data });
     }
 
     if (method === "POST") {
@@ -250,17 +281,14 @@ export default async function handler(req, res) {
         lokasi_operasi: payload.lokasiOperasi || "",
         tgl_masuk: payload.tgl_masuk || new Date().toISOString().split("T")[0],
         status_perbaikan: "Menunggu Pengecekan",
-        catatan: payload.deskripsiKerusikan || "",
+        catatan: payload.deskripsiKerusakan || "",
       });
       if (error) throw error;
 
-      try {
-        await processKomponen(idPerbaikan, payload.komponen, payload.id_kategori_sparepart, payload.id_mesin);
-      } catch (procErr) {
-        console.error("[repairs] processKomponen error:", procErr);
-        await supabase.from("tb_detail_perbaikan").delete().eq("id_perbaikan", idPerbaikan);
-        await supabase.from("tb_perbaikan").delete().eq("id_perbaikan", idPerbaikan);
-        throw procErr;
+      await processKomponen(idPerbaikan, payload.komponen, payload.id_kategori_sparepart, payload.id_mesin);
+
+      if (payload.id_kategori_sparepart === "Accu") {
+        await insertAccuRecord(idPerbaikan, payload.komponen, payload.riwayat_no_kabel, payload.riwayat_sekun);
       }
 
       return res.status(201).json({ success: true, id: idPerbaikan });
@@ -284,6 +312,7 @@ export default async function handler(req, res) {
         .eq("id_perbaikan", idPerbaikan);
       if (error) throw error;
 
+      // Kalau komponen diedit, hapus detail lama & catat ulang (termasuk auto-deduct)
       if (payload.komponen && Array.isArray(payload.komponen)) {
         await supabase.from("tb_detail_perbaikan").delete().eq("id_perbaikan", idPerbaikan);
         await processKomponen(idPerbaikan, payload.komponen, payload.id_kategori_sparepart, payload.id_mesin);
@@ -295,6 +324,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, message: "Method not allowed" });
   } catch (error) {
     console.error("Repairs API Error:", error);
-    return res.status(500).json({ success: false, message: sanitizeError(error) });
+    return res.status(500).json({ success: false, message: error.message });
   }
 }
