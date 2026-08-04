@@ -696,8 +696,8 @@ export default function LaporanPekerjaan() {
                             type="text"
                             className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white"
                             placeholder="Masukkan riwayat sekun"
-                            value={repairFormData.riwayat_sekun}
-                            onChange={e => setRepairFormData({ ...repairFormData, riwayat_sekun: e.target.value })}
+                            value={repairFormData.riwayat_sisa}
+                            onChange={e => setRepairFormData({ ...repairFormData, riwayat_sisa: e.target.value })}
                           />
                         </div>
                       </>

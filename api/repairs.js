@@ -169,7 +169,7 @@ async function processKomponen(idPerbaikan, komponenList, idKategoriSparepart, i
 }
 
 // Simpan baris tb_accu (id_accu = id_perbaikan), khusus kategori "Accu"
-async function insertAccuRecord(idPerbaikan, komponenList, riwayatNoKabel, riwayatSekun) {
+async function insertAccuRecord(idPerbaikan, komponenList, riwayatNoKabel, riwayatSisa) {
   if (!Array.isArray(komponenList) || komponenList.length === 0) return;
 
   const namaKabel = [];
@@ -196,7 +196,7 @@ async function insertAccuRecord(idPerbaikan, komponenList, riwayatNoKabel, riway
     jenis_kabel: namaKabel.join(", "),
     jenis_sekun: namaSekun.join(", "),
     riwayat_no_kabel: riwayatNoKabel || "",
-    riwayat_sekun: riwayatSekun || "",
+    riwayat_sisa: riwayatSisa || "",
   });
 }
 
@@ -283,6 +283,8 @@ export default async function handler(req, res) {
 
     if (method === "POST") {
       const payload = req.body;
+      const kategoriSparepart = String(payload.id_kategori_sparepart || "").trim();
+      const kategoriSparepartLower = kategoriSparepart.toLowerCase();
       const prefix = getCategoryPrefix(payload.id_kategori_sparepart);
       const idPerbaikan = await generateTicketId(prefix);
 
@@ -298,10 +300,15 @@ export default async function handler(req, res) {
       });
       if (error) throw error;
 
-      await processKomponen(idPerbaikan, payload.komponen, payload.id_kategori_sparepart, payload.id_mesin);
+      await processKomponen(idPerbaikan, payload.komponen, kategoriSparepart, payload.id_mesin);
 
-      if (payload.id_kategori_sparepart === "Accu") {
-        await insertAccuRecord(idPerbaikan, payload.komponen, payload.riwayat_no_kabel, payload.riwayat_sekun);
+      if (kategoriSparepartLower === "accu") {
+        await insertAccuRecord(
+          idPerbaikan,
+          payload.komponen,
+          payload.riwayat_no_kabel,
+          payload.riwayat_sisa ?? payload.riwayat_sisa
+        );
       }
 
       return res.status(201).json({ success: true, id: idPerbaikan });
