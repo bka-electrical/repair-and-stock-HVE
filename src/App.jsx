@@ -691,11 +691,11 @@ export default function LaporanPekerjaan() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-200 mb-2">Riwayat Sekun</label>
+                          <label className="block text-sm font-medium text-gray-200 mb-2">Riwayat Sisa</label>
                           <input
                             type="text"
                             className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white"
-                            placeholder="Masukkan riwayat sekun"
+                            placeholder="Masukkan riwayat sisa"
                             value={repairFormData.riwayat_sisa}
                             onChange={e => setRepairFormData({ ...repairFormData, riwayat_sisa: e.target.value })}
                           />
