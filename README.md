@@ -127,10 +127,14 @@ VITE_SUPABASE_ANON_KEY=
 
 Serverless API (Vercel/Node):
 ```bash
-SPREADSHEET_ID=
-# GOOGLE_CREDENTIALS should be a JSON string of Google service account credentials
-GOOGLE_CREDENTIALS=
-REPAIRS_SHEET_URL=
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+Optional WhatsApp notifications:
+```bash
+WHATSAPP_PHONE=
+WHATSAPP_API_KEY=
 ```
 
 > Configure the serverless variables in your deployment platform (e.g., Vercel) for the `/api` routes.

@@ -1,39 +1,153 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxR9mPbzdKH93m-CzqO0IOnthYoMz4bS7pbZvM2LlBTLW1bR8_viIUcwtpn_XLOwAzjdQ/exec";
+// src/api.js
+// Memanggil backend Vercel (/api/repairs dan /api/stok) yang sudah pakai Supabase,
+// bukan lagi Google Apps Script secara langsung.
 
-export const spreadsheetAPI = {
-  fetchData: async (action, params = {}) => {
-    const url = new URL(API_URL);
-    url.searchParams.append('action', action);
-    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
-    const res = await fetch(url);
-    return res.json();
-  },
+const IS_DEV = import.meta.env.DEV;
+const REPAIRS_URL = IS_DEV ? "/dev-api/repairs" : "/api/repairs";
+const STOK_URL = IS_DEV ? "/dev-api/stok" : "/api/stok";
 
-  postData: async (action, body) => {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action, ...body })
-    });
-    return res.json();
+async function parseJsonSafe(res) {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw: text };
   }
-};
+}
 
 export const repairsAPI = {
-  getActive: () => spreadsheetAPI.fetchData('getActiveQueue'),
-  getArchive: () => spreadsheetAPI.fetchData('getArchive'),
-  getStokElektrik: () => spreadsheetAPI.fetchData('getStokElektrik'),
-  getStokDinRad: () => spreadsheetAPI.fetchData('getStokDinRad'),
-  getRiwayatElektrik: (idStok) => spreadsheetAPI.fetchData('getRiwayatElektrik', { id_stok: idStok }),
-  getRiwayatDinRad: (idStok) => spreadsheetAPI.fetchData('getRiwayatDinRad', { id_stok: idStok }),
-  getMasterKategori: () => spreadsheetAPI.fetchData('getKategori'),
-  create: (data) => spreadsheetAPI.postData('createTicket', data),
-  update: (data) => spreadsheetAPI.postData('updateTicket', data),
-  addStokElektrik: (data) => spreadsheetAPI.postData('addStokElektrik', data),
-  addStokDinRad: (data) => spreadsheetAPI.postData('addStokDinRad', data),
-  addRiwayat: (data) => spreadsheetAPI.postData('addRiwayat', data),
-  markAsDipesan: (idKomponen, tipeStok) => spreadsheetAPI.postData('markAsDipesan', { id_komponen: idKomponen, tipe_stok: tipeStok }),
-  getComponents: (idKategori) => spreadsheetAPI.fetchData('getComponents', { id_kategori: idKategori }),
-  getSelectedComponents: (idPerbaikan) => spreadsheetAPI.fetchData('getSelectedComponents', { id_perbaikan: idPerbaikan }),
-  getMasterLocations: () => spreadsheetAPI.fetchData('getLocations'),
-  getMasterMesin: () => spreadsheetAPI.fetchData('getMesin')
+  getActive: async () => {
+    const res = await fetch(REPAIRS_URL);
+    const json = await parseJsonSafe(res);
+    return json.data || [];
+  },
+
+  getArchive: async () => {
+    const res = await fetch(`${REPAIRS_URL}?action=getArchive`);
+    const json = await parseJsonSafe(res);
+    return json.data || [];
+  },
+
+  getMasterKategori: async () => {
+    const res = await fetch(`${REPAIRS_URL}?action=getKategori`);
+    const json = await parseJsonSafe(res);
+    return json.data || [];
+  },
+
+  getMasterLocations: async () => {
+    const res = await fetch(`${REPAIRS_URL}?action=getLocations`);
+    const json = await parseJsonSafe(res);
+    return json.data || [];
+  },
+
+  getMasterMesin: async () => {
+    const res = await fetch(`${REPAIRS_URL}?action=getMesin`);
+    const json = await parseJsonSafe(res);
+    return json.data || [];
+  },
+
+  getComponents: async (idKategori) => {
+    const res = await fetch(`${REPAIRS_URL}?action=getComponents&id_kategori=${encodeURIComponent(idKategori)}`);
+    const json = await parseJsonSafe(res);
+    return json.data || [];
+  },
+
+  getSelectedComponents: async (idPerbaikan) => {
+    const res = await fetch(`${REPAIRS_URL}?action=getSelectedComponents&id_perbaikan=${encodeURIComponent(idPerbaikan)}`);
+    const json = await parseJsonSafe(res);
+    return json.data || [];
+  },
+
+  create: async (data) => {
+    const res = await fetch(REPAIRS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return parseJsonSafe(res);
+  },
+
+  update: async (data) => {
+    const res = await fetch(REPAIRS_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return parseJsonSafe(res);
+  },
+
+  getStokElektrik: async () => {
+    const res = await fetch(`${STOK_URL}?action=getStokElektrik`);
+    const json = await parseJsonSafe(res);
+    return json.data || [];
+  },
+
+  getStokDinRad: async () => {
+    const res = await fetch(`${STOK_URL}?action=getStokDinRad`);
+    const json = await parseJsonSafe(res);
+    return json.data || [];
+  },
+
+  getRiwayatElektrik: async (idStok) => {
+    const res = await fetch(`${STOK_URL}?action=getRiwayatElektrik&id_stok=${encodeURIComponent(idStok)}`);
+    const json = await parseJsonSafe(res);
+    return json.data || [];
+  },
+
+  getRiwayatDinRad: async (idStok) => {
+    const res = await fetch(`${STOK_URL}?action=getRiwayatDinRad&id_stok=${encodeURIComponent(idStok)}`);
+    const json = await parseJsonSafe(res);
+    return json.data || [];
+  },
+
+  addStokElektrik: async (data) => {
+    const res = await fetch(`${STOK_URL}?action=addStokElektrik`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return parseJsonSafe(res);
+  },
+
+  addStokDinRad: async (data) => {
+    const res = await fetch(`${STOK_URL}?action=addStokDinRad`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return parseJsonSafe(res);
+  },
+
+  addRiwayat: async (data) => {
+    const res = await fetch(`${STOK_URL}?action=addRiwayat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return parseJsonSafe(res);
+  },
+
+  markAsDipesan: async (idKomponen, tipeStok) => {
+    const res = await fetch(`${STOK_URL}?action=markAsDipesan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id_komponen: idKomponen, tipe_stok: tipeStok }),
+    });
+    return parseJsonSafe(res);
+  },
+
+  getStockInfo: async () => {
+    const [elektrik, dinrad] = await Promise.all([
+      repairsAPI.getStokElektrik(),
+      repairsAPI.getStokDinRad(),
+    ]);
+    const map = {};
+    (elektrik || []).forEach((row) => {
+      map[row.id_komponen] = { stok: row.stok_saat_ini, batas: row.batas_minimal };
+    });
+    (dinrad || []).forEach((row) => {
+      map[row.id_komponen] = { stok: row.stok_saat_ini, batas: row.batas_minimal };
+    });
+    return map;
+  },
 };

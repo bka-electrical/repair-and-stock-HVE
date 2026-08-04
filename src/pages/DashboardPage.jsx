@@ -21,6 +21,7 @@ const matchesKeywords = (repair, keywords) => {
 export default function DashboardPage({
   activeRepairs,
   archiveRepairs,
+  stockSummary,
   onNavigateRepair,
   onNavigateStock,
   onNavigateArchive,
@@ -216,13 +217,13 @@ export default function DashboardPage({
                   {latestTasks.length === 0 ? (
                     <p className="text-sm text-slate-400">Belum ada tugas aktif.</p>
                   ) : latestTasks.map(task => (
-                    <button key={task.id_perbaikan} onClick={(e) => { e.stopPropagation(); setSelectedTask(task); }} className="w-full rounded-3xl border border-slate-800 bg-slate-950/80 px-3 py-3 text-left transition hover:border-emerald-400">
+                    <div key={task.id_perbaikan} onClick={(e) => { e.stopPropagation(); setSelectedTask(task); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setSelectedTask(task); } }} role="button" tabIndex={0} className="w-full rounded-3xl border border-slate-800 bg-slate-950/80 px-3 py-3 text-left transition hover:border-emerald-400 cursor-pointer">
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-semibold text-white">{task.nama_unit || task.id_perbaikan || "Tugas Baru"}</p>
                         <span className="rounded-full bg-slate-800 px-2 py-1 text-[11px] font-medium text-slate-300">{task.status_perbaikan || "Dalam Pengerjaan"}</span>
                       </div>
                       <p className="mt-1 text-xs text-slate-400">{task.lokasiOperasi || "Lokasi tidak tersedia"}</p>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </button>
@@ -268,7 +269,7 @@ export default function DashboardPage({
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-red-300">{t.outOfStock}</p>
-                  <p className="mt-3 text-3xl font-semibold text-white">0</p>
+                  <p className="mt-3 text-3xl font-semibold text-white">{stockSummary?.outOfStock ?? 0}</p>
                 </div>
                 <div className="rounded-2xl bg-red-500/10 p-3 text-red-300">
                   <Box size={24} />
@@ -281,7 +282,7 @@ export default function DashboardPage({
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-yellow-300">{t.lowStock}</p>
-                  <p className="mt-3 text-3xl font-semibold text-white">0</p>
+                  <p className="mt-3 text-3xl font-semibold text-white">{stockSummary?.lowStock ?? 0}</p>
                 </div>
                 <div className="rounded-2xl bg-yellow-500/10 p-3 text-yellow-300">
                   <Package size={24} />

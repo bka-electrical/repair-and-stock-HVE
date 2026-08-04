@@ -21,6 +21,8 @@ export default function LaporanPekerjaan() {
   const [komponenList, setKomponenList] = useState([]);
   const [selectedKomponen, setSelectedKomponen] = useState([]);
   const [komponenLoading, setKomponenLoading] = useState(false);
+  const [komponenStock, setKomponenStock] = useState({});
+  const [stockSummary, setStockSummary] = useState({ outOfStock: 0, lowStock: 0 });
   const komponenLoadIdRef = useRef(0);
   const [page, setPage] = useState('dashboard'); // 'dashboard' | 'perbaikan' | 'stok' | 'terkirim'
   const [repairFormData, setRepairFormData] = useState({
@@ -38,11 +40,27 @@ export default function LaporanPekerjaan() {
   useEffect(() => {
     loadQueue();
     loadMasterData();
+    loadStockSummary();
   }, []);
 
   useEffect(() => {
     if (view === 'archive') loadArchive();
   }, [view]);
+
+  const loadStockSummary = async () => {
+    try {
+      const map = await repairsAPI.getStockInfo();
+      setKomponenStock(map);
+      const entries = Object.values(map);
+      const outOfStock = entries.filter((item) => (item.stok || 0) === 0).length;
+      const lowStock = entries.filter((item) => {
+        const stok = item.stok || 0;
+        const batas = item.batas || 0;
+        return stok > 0 && batas > 0 && stok <= batas;
+      }).length;
+      setStockSummary({ outOfStock, lowStock });
+    } catch (e) { console.error('Stock summary fail', e); }
+  };
 
   const loadMasterData = async () => {
     try {
@@ -128,6 +146,7 @@ export default function LaporanPekerjaan() {
     setRepairFormData({ ...repairFormData, id_kategori_sparepart: kategori });
     setSelectedKomponen([]);
     setKomponenList([]);
+    setKomponenStock({});
     setKomponenLoading(false);
 
     if (kategori) {
@@ -138,6 +157,9 @@ export default function LaporanPekerjaan() {
         const comps = await repairsAPI.getComponents(kategori);
         if (komponenLoadIdRef.current !== loadId) return;
         setKomponenList(comps);
+        const stockMap = await repairsAPI.getStockInfo();
+        if (komponenLoadIdRef.current !== loadId) return;
+        setKomponenStock(stockMap);
       } catch (err) {
         console.error(err);
       } finally {
@@ -192,11 +214,13 @@ export default function LaporanPekerjaan() {
     setSelectedRepair({ ...repair, selectedKomponen: [] });
     if (repair.id_kategori_sparepart) {
       try {
-        const [comps, selected] = await Promise.all([
+        const [comps, selected, stockMap] = await Promise.all([
           repairsAPI.getComponents(repair.id_kategori_sparepart),
-          repairsAPI.getSelectedComponents(repair.id_perbaikan)
+          repairsAPI.getSelectedComponents(repair.id_perbaikan),
+          repairsAPI.getStockInfo(),
         ]);
         setKomponenList(comps);
+        setKomponenStock(stockMap);
         setSelectedRepair(prev => ({ ...prev, selectedKomponen: selected }));
       } catch (e) { console.error(e); }
     }
@@ -260,6 +284,7 @@ export default function LaporanPekerjaan() {
       <DashboardPage
         activeRepairs={repairs}
         archiveRepairs={archive}
+        stockSummary={stockSummary}
         onNavigateRepair={navigateToRepair}
         onNavigateStock={navigateToStock}
         onNavigateArchive={navigateToArchive}
@@ -362,7 +387,7 @@ export default function LaporanPekerjaan() {
                   {groupedRepairs.map(group => (
                     <React.Fragment key={group.key}>
                       {groupBy !== 'none' && (
-                        <tr className="bg-slate-900">
+                        <tr key={`group-${group.key}`} className="bg-slate-900">
                           <td colSpan="8" className="px-6 py-2 text-sm font-semibold uppercase text-slate-300">
                             {group.label} ({group.items.length} tiket)
                           </td>
@@ -418,7 +443,7 @@ export default function LaporanPekerjaan() {
                   {groupedArchive.map(group => (
                     <React.Fragment key={group.key}>
                       {groupBy !== 'none' && (
-                        <tr className="bg-slate-900">
+                        <tr key={`archive-group-${group.key}`} className="bg-slate-900">
                           <td colSpan="8" className="px-6 py-2 text-sm font-semibold uppercase text-slate-300">
                             {group.label} ({group.items.length} tiket)
                           </td>
@@ -453,11 +478,11 @@ export default function LaporanPekerjaan() {
 
       {/* Repair Detail Modal (Slide-out Panel style but modal) */}
       {selectedRepair && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center z-10">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detail Perbaikan</h2>
-              <button onClick={() => { setSelectedRepair(null); setKomponenList([]); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-900 dark:bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gray-900 dark:bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center z-10">
+              <h2 className="text-xl font-bold text-white">Detail Perbaikan</h2>
+              <button onClick={() => { setSelectedRepair(null); setKomponenList([]); }} className="text-gray-400 hover:text-white">
                 <X size={24} />
               </button>
             </div>
@@ -465,12 +490,12 @@ export default function LaporanPekerjaan() {
             <div className="p-6 space-y-6">
               <div>
                 <p className="text-xs font-bold text-gray-400 mb-2 uppercase">ID Perbaikan</p>
-                <p className="text-lg font-bold text-gray-900 dark:text-white">{selectedRepair.id_perbaikan}</p>
+                <p className="text-lg font-bold text-white">{selectedRepair.id_perbaikan}</p>
               </div>
 
               <div>
                 <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Status Perbaikan</p>
-                <select className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={selectedRepair.status_perbaikan} onChange={e => setSelectedRepair({...selectedRepair, status_perbaikan: e.target.value})}>
+                <select className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" value={selectedRepair.status_perbaikan} onChange={e => setSelectedRepair({...selectedRepair, status_perbaikan: e.target.value})}>
                   {Object.keys(statusConfig).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
@@ -478,18 +503,18 @@ export default function LaporanPekerjaan() {
               {selectedRepair.status_perbaikan === 'Selesai' && (
                 <div>
                   <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Tanggal Keluar</p>
-                  <input type="date" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={selectedRepair.tgl_keluar || ""} onChange={e => setSelectedRepair({...selectedRepair, tgl_keluar: e.target.value})} />
+                  <input type="date" className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" value={selectedRepair.tgl_keluar || ""} onChange={e => setSelectedRepair({...selectedRepair, tgl_keluar: e.target.value})} />
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Nama Unit</p>
-                  <p className="font-medium text-gray-900 dark:text-white">{selectedRepair.nama_unit || "-"}</p>
+                  <p className="font-medium text-white">{selectedRepair.nama_unit || "-"}</p>
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Nama Mesin</p>
-                  <p className="font-medium text-gray-900 dark:text-white">
+                  <p className="font-medium text-white">
                     {(() => {
                       const m = mesin.find(item => String(item.id_mesin) === String(selectedRepair.id_mesin));
                       return m ? m.nama_mesin : (selectedRepair.id_mesin || "-");
@@ -498,11 +523,11 @@ export default function LaporanPekerjaan() {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Lokasi</p>
-                  <p className="font-medium text-gray-900 dark:text-white">{selectedRepair.lokasiOperasi || "-"}</p>
+                  <p className="font-medium text-white">{selectedRepair.lokasiOperasi || "-"}</p>
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Kategori</p>
-                  <p className="font-medium text-gray-900 dark:text-white">{selectedRepair.id_kategori_sparepart || "-"}</p>
+                  <p className="font-medium text-white">{selectedRepair.id_kategori_sparepart || "-"}</p>
                 </div>
               </div>
 
@@ -514,8 +539,9 @@ export default function LaporanPekerjaan() {
                       const selected = selectedRepair.selectedKomponen?.find(s => (typeof s === 'object' ? s.id_komponen : s) === k.id_komponen);
                       const checked = !!selected;
                       const jumlah = typeof selected === 'object' ? selected.jumlah : 1;
+                      const sisaStok = komponenStock[k.id_komponen]?.stok;
                       return (
-                        <label key={k.id_komponen} className="flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                        <label key={k.id_komponen} className="flex items-center gap-3 p-3 border border-gray-700 rounded-lg hover:bg-gray-800 cursor-pointer">
                           <input type="checkbox" checked={checked} onChange={e => {
                             const current = selectedRepair.selectedKomponen || [];
                             const updated = e.target.checked
@@ -523,25 +549,30 @@ export default function LaporanPekerjaan() {
                               : current.filter(s => (typeof s === 'object' ? s.id_komponen : s) !== k.id_komponen);
                             setSelectedRepair({...selectedRepair, selectedKomponen: updated});
                           }} className="w-4 h-4 text-indigo-600 rounded" />
-                          <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{k.nama_komponen}</span>
-                          <input
-                            type="number"
-                            min="1"
-                            disabled={!checked}
-                            className={`w-16 p-2 border border-gray-300 dark:border-gray-600 rounded bg-slate-700 text-white text-center ${checked ? 'opacity-100' : 'opacity-50'}`}
-                            value={checked ? jumlah : ''}
-                            onChange={e => {
-                              const val = parseInt(e.target.value) || 1;
-                              setSelectedRepair(prev => ({
-                                ...prev,
-                                selectedKomponen: (prev.selectedKomponen || []).map(s =>
-                                  (typeof s === 'object' ? s.id_komponen : s) === k.id_komponen
-                                    ? { id_komponen: k.id_komponen, jumlah: Math.max(1, val) }
-                                    : s
-                                )
-                              }));
-                            }}
-                          />
+                          <span className="text-sm text-gray-300 flex-1">{k.nama_komponen}</span>
+                          <div className="flex items-center gap-2">
+                            {sisaStok !== null && (
+                              <span className="text-xs text-gray-400 min-w-[48px] text-right">stok: {sisaStok}</span>
+                            )}
+                            <input
+                              type="number"
+                              min="1"
+                              disabled={!checked}
+                              className={`w-16 p-2 border border-gray-600 rounded bg-gray-800 text-white text-center ${checked ? 'opacity-100' : 'opacity-50'}`}
+                              value={checked ? jumlah : ''}
+                              onChange={e => {
+                                const val = parseInt(e.target.value) || 1;
+                                setSelectedRepair(prev => ({
+                                  ...prev,
+                                  selectedKomponen: (prev.selectedKomponen || []).map(s =>
+                                    (typeof s === 'object' ? s.id_komponen : s) === k.id_komponen
+                                      ? { id_komponen: k.id_komponen, jumlah: Math.max(1, val) }
+                                      : s
+                                  )
+                                }));
+                              }}
+                            />
+                          </div>
                         </label>
                       );
                     })}
@@ -551,12 +582,12 @@ export default function LaporanPekerjaan() {
 
               <div>
                 <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Catatan</p>
-                <textarea className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white h-24 resize-none" placeholder="Tambahkan catatan..." value={selectedRepair.catatan || ""} onChange={e => setSelectedRepair({...selectedRepair, catatan: e.target.value})} />
+                <textarea className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white h-24 resize-none" placeholder="Tambahkan catatan..." value={selectedRepair.catatan || ""} onChange={e => setSelectedRepair({...selectedRepair, catatan: e.target.value})} />
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex gap-3">
-              <button onClick={() => setSelectedRepair(null)} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+            <div className="sticky bottom-0 bg-gray-900 dark:bg-gray-800 border-t border-gray-700 px-6 py-4 flex gap-3">
+              <button onClick={() => setSelectedRepair(null)} className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800">
                 Batal
               </button>
               <button onClick={handleUpdateTicket} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
@@ -569,97 +600,104 @@ export default function LaporanPekerjaan() {
 
       {/* Create Ticket Modal */}
       {showRepairForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[calc(100vh-4rem)] overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Tiket Perbaikan Baru</h2>
-              <button onClick={() => setShowRepairForm(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-900 dark:bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg max-h-[calc(100vh-4rem)] overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-white">Tiket Perbaikan Baru</h2>
+              <button onClick={() => setShowRepairForm(false)} className="text-gray-400 hover:text-white">
                 <X size={24} />
               </button>
             </div>
                <form onSubmit={handleCreateTicket} className="p-6 space-y-4 overflow-y-auto max-h-[calc(100vh-12rem)]">
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nama Unit</label>
-                   <input type="text" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required placeholder="Contoh: EXCAVATOR 01" value={repairFormData.nama_unit} onChange={e => setRepairFormData({...repairFormData, nama_unit: e.target.value})} />
-                 </div>
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nama Mesin</label>
-                   <select className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={repairFormData.id_mesin} onChange={e => setRepairFormData({...repairFormData, id_mesin: e.target.value})}>
-                     <option value="">Pilih Mesin</option>
-                     {mesin.map(m => <option key={m.id_mesin} value={m.id_mesin}>{m.nama_mesin}</option>)}
-                   </select>
-                 </div>
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kategori Sparepart</label>
-                   <select className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={repairFormData.id_kategori_sparepart} onChange={handleKategoriChange}>
-                     <option value="">Pilih Kategori</option>
-                     {categories.map(c => <option key={c.id_kategori} value={c.nama_kategori}>{c.nama_kategori}</option>)}
-                   </select>
-                 </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-200 mb-2">Nama Unit</label>
+                    <input type="text" className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required placeholder="Contoh: EXCAVATOR 01" value={repairFormData.nama_unit} onChange={e => setRepairFormData({...repairFormData, nama_unit: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-200 mb-2">Nama Mesin</label>
+                    <select className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required value={repairFormData.id_mesin} onChange={e => setRepairFormData({...repairFormData, id_mesin: e.target.value})}>
+                      <option value="">Pilih Mesin</option>
+                      {mesin.map(m => <option key={m.id_mesin} value={m.id_mesin}>{m.nama_mesin}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-200 mb-2">Kategori Sparepart</label>
+                    <select className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required value={repairFormData.id_kategori_sparepart} onChange={handleKategoriChange}>
+                      <option value="">Pilih Kategori</option>
+                      {categories.map(c => <option key={c.id_kategori} value={c.nama_kategori}>{c.nama_kategori}</option>)}
+                    </select>
+                  </div>
 
-                  {(komponenLoading || komponenList.length > 0) && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Komponen yang diganti</label>
-                      <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                        {komponenLoading ? (
-                          <div className="flex items-center justify-center py-10 text-sm text-gray-500 dark:text-gray-400">
-                            Memuat komponen...
-                          </div>
-                        ) : (
-                          komponenList.map(k => {
-                            const selected = selectedKomponen.find(s => s.id_komponen === k.id_komponen);
-                            const checked = !!selected;
-                            return (
-                              <label key={k.id_komponen} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer">
-                                <input type="checkbox" checked={checked} onChange={e => {
-                                  const updated = e.target.checked
-                                    ? [...selectedKomponen, { id_komponen: k.id_komponen, jumlah: 1 }]
-                                    : selectedKomponen.filter(s => s.id_komponen !== k.id_komponen);
-                                  setSelectedKomponen(updated);
-                                }} className="w-4 h-4 text-indigo-600 rounded" />
-                                <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{k.nama_komponen}</span>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  disabled={!checked}
-                                  className={`w-16 p-2 border border-gray-300 dark:border-gray-600 rounded bg-slate-700 text-white text-center ${checked ? 'opacity-100' : 'opacity-50'}`}
-                                  value={selected ? selected.jumlah : ''}
-                                  onChange={e => {
-                                    const val = parseInt(e.target.value) || 1;
-                                    setSelectedKomponen(prev => prev.map(s => s.id_komponen === k.id_komponen ? { ...s, jumlah: Math.max(1, val) } : s));
-                                  }}
-                                />
-                              </label>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                  )}
+                   {(komponenLoading || komponenList.length > 0) && (
+                     <div>
+                       <label className="block text-sm font-medium text-gray-200 mb-2">Komponen yang diganti</label>
+                       <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-700 rounded-lg p-3">
+                         {komponenLoading ? (
+                           <div className="flex items-center justify-center py-10 text-sm text-gray-400">
+                             Memuat komponen...
+                           </div>
+                         ) : (
+                            komponenList.map(k => {
+                              const selected = selectedKomponen.find(s => s.id_komponen === k.id_komponen);
+                              const checked = !!selected;
+                              const stockInfo = komponenStock[k.id_komponen];
+                              const sisaStok = stockInfo ? stockInfo.stok : null;
+                              return (
+                                <label key={k.id_komponen} className="flex items-center gap-3 p-2 hover:bg-gray-800 rounded cursor-pointer">
+                                  <input type="checkbox" checked={checked} onChange={e => {
+                                    const updated = e.target.checked
+                                      ? [...selectedKomponen, { id_komponen: k.id_komponen, jumlah: 1 }]
+                                      : selectedKomponen.filter(s => s.id_komponen !== k.id_komponen);
+                                    setSelectedKomponen(updated);
+                                  }} className="w-4 h-4 text-indigo-600 rounded" />
+                                  <span className="text-sm text-gray-300 flex-1">{k.nama_komponen}</span>
+                                  <div className="flex items-center gap-2">
+                                    {sisaStok !== null && (
+                                      <span className="text-xs text-gray-400 min-w-[48px] text-right">stok: {sisaStok}</span>
+                                    )}
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      disabled={!checked}
+                                      className={`w-16 p-2 border border-gray-600 rounded bg-gray-800 text-white text-center ${checked ? 'opacity-100' : 'opacity-50'}`}
+                                      value={selected ? selected.jumlah : ''}
+                                      onChange={e => {
+                                        const val = parseInt(e.target.value) || 1;
+                                        setSelectedKomponen(prev => prev.map(s => s.id_komponen === k.id_komponen ? { ...s, jumlah: Math.max(1, val) } : s));
+                                      }}
+                                    />
+                                  </div>
+                                </label>
+                              );
+                            })
+                         )}
+                       </div>
+                     </div>
+                   )}
 
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Lokasi</label>
-                   <select className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={repairFormData.lokasiOperasi} onChange={e => setRepairFormData({...repairFormData, lokasiOperasi: e.target.value})}>
-                     <option value="">Pilih Lokasi</option>
-                     {locations.map(l => <option key={l.id_lokasi} value={l.nama_lokasi}>{l.nama_lokasi}</option>)}
-                   </select>
-                 </div>
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tanggal Masuk</label>
-                   <input type="date" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={repairFormData.tgl_masuk} onChange={e => setRepairFormData({...repairFormData, tgl_masuk: e.target.value})} />
-                 </div>
-                 <div className="flex gap-3 pt-4">
-                   <button type="button" onClick={() => { setShowRepairForm(false); setSelectedKomponen([]); setKomponenList([]); }} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-                     Batal
-                   </button>
-                   <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
-                     Buat Tiket
-                   </button>
-                 </div>
-               </form>
-          </div>
-        </div>
-      )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-200 mb-2">Lokasi</label>
+                    <select className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required value={repairFormData.lokasiOperasi} onChange={e => setRepairFormData({...repairFormData, lokasiOperasi: e.target.value})}>
+                      <option value="">Pilih Lokasi</option>
+                      {locations.map(l => <option key={l.id_lokasi} value={l.nama_lokasi}>{l.nama_lokasi}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-200 mb-2">Tanggal Masuk</label>
+                    <input type="date" className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required value={repairFormData.tgl_masuk} onChange={e => setRepairFormData({...repairFormData, tgl_masuk: e.target.value})} />
+                  </div>
+                  <div className="flex gap-3 pt-4">
+                    <button type="button" onClick={() => { setShowRepairForm(false); setSelectedKomponen([]); setKomponenList([]); }} className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800">
+                      Batal
+                    </button>
+                    <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+                      Buat Tiket
+                    </button>
+                  </div>
+                </form>
+           </div>
+         </div>
+       )}
     </div>
   )}
   {page === 'stok' && (

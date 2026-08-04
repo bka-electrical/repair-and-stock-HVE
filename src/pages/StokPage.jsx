@@ -248,23 +248,23 @@ export default function StokPage({ onBack }) {
                 <tr>
                   {activeTab === 'elektrik' ? (
                     <>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ID Stok</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ID Komponen</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nama Komponen</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Stok Saat Ini</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Batas Minimal</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">ID Stok</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">ID Komponen</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Nama Komponen</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Stok Saat Ini</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Batas Minimal</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Status</th>
                     </>
                   ) : (
                     <>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ID Stok</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ID Komponen</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Kompatibilitas Unit</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nama Spesifikasi</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Posisi Rak</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase">Stok</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase">Batas Min</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">ID Stok</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">ID Komponen</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Kompatibilitas Unit</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Nama Spesifikasi</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Posisi Rak</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Stok</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Batas Min</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Status</th>
                     </>
                   )}
                 </tr>
@@ -281,22 +281,22 @@ export default function StokPage({ onBack }) {
                       <tr key={item.id_stok_elektrik || item.id_stok_din_rad} className="hover:bg-slate-900/80 cursor-pointer" onClick={() => handleRowClick(item)}>
                         {activeTab === 'elektrik' ? (
                           <>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{item.id_stok_elektrik}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.id_komponen}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.nama_komponen}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.stok_saat_ini}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.batas_minimal}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200">{item.id_stok_elektrik}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.id_komponen}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.nama_komponen}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.stok_saat_ini}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.batas_minimal}</td>
                             <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${badge.color}`}>{badge.text}</span></td>
                           </>
                         ) : (
                           <>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{item.id_stok_din_rad}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.id_komponen}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.kompatibilitas_unit}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.nama_spesifikasi_barang}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.posisi_rak}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.stok_saat_ini}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{item.batas_minimal}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200">{item.id_stok_din_rad}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.id_komponen}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.kompatibilitas_unit}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.nama_spesifikasi_barang}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.posisi_rak}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.stok_saat_ini}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.batas_minimal}</td>
                             <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${badge.color}`}>{badge.text}</span></td>
                           </>
                         )}
@@ -312,58 +312,58 @@ export default function StokPage({ onBack }) {
 
       {/* Modal Input Stok */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Input Stok Baru</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={24} /></button>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-900 dark:bg-gray-800 border border-gray-700 dark:border-gray-700 rounded-xl shadow-2xl w-full max-w-lg">
+            <div className="px-6 py-4 border-b border-gray-700 dark:border-gray-700 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-white">Input Stok Baru</h2>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white"><X size={24} /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {activeTab === 'elektrik' ? (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ID Komponen</label>
-                    <input type="text" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={formData.id_komponen} onChange={e => setFormData({...formData, id_komponen: e.target.value})} />
+                    <label className="block text-sm font-medium text-gray-200 mb-2">ID Komponen</label>
+                    <input type="text" className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required value={formData.id_komponen} onChange={e => setFormData({...formData, id_komponen: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nama Komponen</label>
-                    <input type="text" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={formData.nama_komponen} onChange={e => setFormData({...formData, nama_komponen: e.target.value})} />
+                    <label className="block text-sm font-medium text-gray-200 mb-2">Nama Komponen</label>
+                    <input type="text" className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required value={formData.nama_komponen} onChange={e => setFormData({...formData, nama_komponen: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Stok Saat Ini</label>
-                    <input type="number" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={formData.stok_saat_ini} onChange={e => setFormData({...formData, stok_saat_ini: e.target.value})} />
+                    <label className="block text-sm font-medium text-gray-200 mb-2">Stok Saat Ini</label>
+                    <input type="number" className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required value={formData.stok_saat_ini} onChange={e => setFormData({...formData, stok_saat_ini: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Batas Minimal</label>
-                    <input type="number" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={formData.batas_minimal} onChange={e => setFormData({...formData, batas_minimal: e.target.value})} />
+                    <label className="block text-sm font-medium text-gray-200 mb-2">Batas Minimal</label>
+                    <input type="number" className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required value={formData.batas_minimal} onChange={e => setFormData({...formData, batas_minimal: e.target.value})} />
                   </div>
                 </>
               ) : (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ID Komponen</label>
-                    <input type="text" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={formData.id_komponen} onChange={e => setFormData({...formData, id_komponen: e.target.value})} />
+                    <label className="block text-sm font-medium text-gray-200 mb-2">ID Komponen</label>
+                    <input type="text" className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required value={formData.id_komponen} onChange={e => setFormData({...formData, id_komponen: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kompatibilitas Unit</label>
-                    <input type="text" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={formData.kompatibilitas_unit} onChange={e => setFormData({...formData, kompatibilitas_unit: e.target.value})} />
+                    <label className="block text-sm font-medium text-gray-200 mb-2">Kompatibilitas Unit</label>
+                    <input type="text" className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required value={formData.kompatibilitas_unit} onChange={e => setFormData({...formData, kompatibilitas_unit: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nama Spesifikasi Barang</label>
-                    <input type="text" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={formData.nama_spesifikasi_barang} onChange={e => setFormData({...formData, nama_spesifikasi_barang: e.target.value})} />
+                    <label className="block text-sm font-medium text-gray-200 mb-2">Nama Spesifikasi Barang</label>
+                    <input type="text" className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required value={formData.nama_spesifikasi_barang} onChange={e => setFormData({...formData, nama_spesifikasi_barang: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Posisi Rak</label>
-                    <input type="text" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={formData.posisi_rak} onChange={e => setFormData({...formData, posisi_rak: e.target.value})} />
+                    <label className="block text-sm font-medium text-gray-200 mb-2">Posisi Rak</label>
+                    <input type="text" className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required value={formData.posisi_rak} onChange={e => setFormData({...formData, posisi_rak: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Batas Minimal</label>
-                    <input type="number" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={formData.batas_minimal} onChange={e => setFormData({...formData, batas_minimal: e.target.value})} />
+                    <label className="block text-sm font-medium text-gray-200 mb-2">Batas Minimal</label>
+                    <input type="number" className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required value={formData.batas_minimal} onChange={e => setFormData({...formData, batas_minimal: e.target.value})} />
                   </div>
                 </>
               )}
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Batal</button>
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800">Batal</button>
                 <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">Simpan</button>
               </div>
             </form>
@@ -373,83 +373,83 @@ export default function StokPage({ onBack }) {
 
       {/* History Modal */}
       {showHistory && selectedItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Riwayat Stok - {selectedItem.id_stok_elektrik || selectedItem.id_stok_din_rad}</h2>
-              <button onClick={() => { setShowHistory(false); setSelectedItem(null); setShowAddTransaction(false); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={24} /></button>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-900 dark:bg-gray-800 border border-gray-700 dark:border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-700 dark:border-gray-700 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-white">Riwayat Stok - {selectedItem.id_stok_elektrik || selectedItem.id_stok_din_rad}</h2>
+              <button onClick={() => { setShowHistory(false); setSelectedItem(null); setShowAddTransaction(false); }} className="text-gray-400 hover:text-white"><X size={24} /></button>
             </div>
             
             {/* Add Transaction Form */}
             {showAddTransaction ? (
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold mb-4">Tambah Transaksi</h3>
+              <div className="p-6 border-b border-gray-700 dark:border-gray-700">
+                <h3 className="text-lg font-semibold mb-4 text-white">Tambah Transaksi</h3>
                 <form onSubmit={handleAddTransaction} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Jenis Transaksi</label>
-                      <select className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={transaksiForm.jenis_transaksi} onChange={e => setTransaksiForm({...transaksiForm, jenis_transaksi: e.target.value})}>
+                      <label className="block text-sm font-medium text-gray-200 mb-2">Jenis Transaksi</label>
+                      <select className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" value={transaksiForm.jenis_transaksi} onChange={e => setTransaksiForm({...transaksiForm, jenis_transaksi: e.target.value})}>
                         <option value="Masuk">Masuk</option>
                         <option value="Keluar">Keluar</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Jumlah</label>
-                      <input type="number" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={transaksiForm.jumlah} onChange={e => setTransaksiForm({...transaksiForm, jumlah: e.target.value})} />
+                      <label className="block text-sm font-medium text-gray-200 mb-2">Jumlah</label>
+                      <input type="number" className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required value={transaksiForm.jumlah} onChange={e => setTransaksiForm({...transaksiForm, jumlah: e.target.value})} />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tanggal</label>
-                      <input type="date" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required value={transaksiForm.tgl_transaksi} onChange={e => setTransaksiForm({...transaksiForm, tgl_transaksi: e.target.value})} />
+                      <label className="block text-sm font-medium text-gray-200 mb-2">Tanggal</label>
+                      <input type="date" className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" required value={transaksiForm.tgl_transaksi} onChange={e => setTransaksiForm({...transaksiForm, tgl_transaksi: e.target.value})} />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Keterangan</label>
-                      <input type="text" className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={transaksiForm.keterangan} onChange={e => setTransaksiForm({...transaksiForm, keterangan: e.target.value})} />
+                      <label className="block text-sm font-medium text-gray-200 mb-2">Keterangan</label>
+                      <input type="text" className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white" value={transaksiForm.keterangan} onChange={e => setTransaksiForm({...transaksiForm, keterangan: e.target.value})} />
                     </div>
                   </div>
                   <div className="flex gap-3 pt-4">
-                    <button type="button" onClick={() => setShowAddTransaction(false)} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Batal</button>
+                    <button type="button" onClick={() => setShowAddTransaction(false)} className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800">Batal</button>
                     <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">Simpan</button>
                   </div>
                 </form>
               </div>
             ) : (
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="p-6 border-b border-gray-700 dark:border-gray-700">
                 <button onClick={() => setShowAddTransaction(true)} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2">
                   <Plus size={20} /> Tambah Transaksi
                 </button>
               </div>
             )}
             
-            <div className="p-6">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ID Riwayat</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Jenis Transaksi</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Jumlah</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Tanggal</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Keterangan</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {riwayat.length === 0 ? (
-                    <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">Belum ada riwayat</td>
-                    </tr>
-                  ) : (
-                    riwayat.map(r => (
-                      <tr key={r.id_riwayat_elektrik || r.id_riwayat_din_rad} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{r.id_riwayat_elektrik || r.id_riwayat_din_rad}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{r.jenis_transaksi}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{r.jumlah}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{formatDate(r.tgl_transaksi)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{r.keterangan}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+             <div className="p-6">
+               <table className="min-w-full divide-y divide-gray-700">
+                 <thead className="bg-gray-800">
+                   <tr>
+                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">ID Riwayat</th>
+                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Jenis Transaksi</th>
+                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Jumlah</th>
+                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Tanggal</th>
+                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Keterangan</th>
+                   </tr>
+                 </thead>
+                 <tbody className="bg-gray-900 divide-y divide-gray-700">
+                   {riwayat.length === 0 ? (
+                     <tr>
+                       <td colSpan="5" className="px-6 py-12 text-center text-gray-500">Belum ada riwayat</td>
+                     </tr>
+                   ) : (
+                     riwayat.map(r => (
+                       <tr key={r.id_riwayat_elektrik || r.id_riwayat_din_rad} className="hover:bg-gray-800">
+                         <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{r.id_riwayat_elektrik || r.id_riwayat_din_rad}</td>
+                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{r.jenis_transaksi}</td>
+                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{r.jumlah}</td>
+                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{formatDate(r.tgl_transaksi)}</td>
+                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{r.keterangan}</td>
+                       </tr>
+                     ))
+                   )}
+                 </tbody>
+               </table>
+             </div>
           </div>
         </div>
       )}

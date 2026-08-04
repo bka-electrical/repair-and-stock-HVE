@@ -1,77 +1,62 @@
 // api/spareparts.js
-import { google } from "googleapis";
+// Migrasi dari Google Sheets API -> Supabase
+import { getSupabase } from "./_lib/supabase.js";
+import { getCorsHeaders, sanitizeError } from "./_lib/helpers.js";
 
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-const SHEET_NAME = "Spareparts";
-
-const getGoogleAuth = () => {
-  const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
-  return new google.auth.GoogleAuth({
-    credentials,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
-};
+const supabase = getSupabase();
 
 export default async function handler(req, res) {
+  const corsHeaders = getCorsHeaders(req);
+  Object.entries(corsHeaders).forEach(([k, v]) => res.setHeader(k, v));
+
   if (req.method === "OPTIONS") {
-    return res.status(200).json({});
+    return res.status(200).end();
   }
 
   try {
-    const auth = getGoogleAuth();
-    const sheets = google.sheets({ version: "v4", auth });
 
-    // GET - Ambil semua sparepart
+  try {
     if (req.method === "GET") {
-      const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_NAME}!A2:J`,
-      });
+      const { data, error } = await supabase
+        .from("spareparts")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
 
-      const rows = response.data.values || [];
-      const spareparts = rows.map((row) => ({
-        id: row[0],
-        namaPart: row[1],
-        deskripsi: row[2],
-        jumlah: parseInt(row[3]) || 0,
-        unit: row[4],
-        status: row[5] || "pending", // pending, ordered, arrived
-        tanggalDipesan: row[6] || "",
-        tanggalDatang: row[7] || "",
-        createdBy: row[8] || "",
-        createdAt: row[9] || "",
+      const mapped = data.map((row) => ({
+        id: row.id,
+        namaPart: row.nama_part,
+        deskripsi: row.deskripsi,
+        jumlah: row.jumlah,
+        unit: row.unit,
+        status: row.status,
+        tanggalDipesan: row.tanggal_dipesan,
+        tanggalDatang: row.tanggal_datang,
+        createdBy: row.created_by,
+        createdAt: row.created_at,
       }));
 
-      return res.status(200).json({ success: true, data: spareparts });
+      return res.status(200).json({ success: true, data: mapped });
     }
 
-    // POST - Tambah sparepart baru
     if (req.method === "POST") {
       const { namaPart, deskripsi, jumlah, unit, createdBy } = req.body;
       const id = Date.now().toString();
       const createdAt = new Date().toISOString();
 
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_NAME}!A2:J`,
-        valueInputOption: "RAW",
-        requestBody: {
-          values: [
-            [
-              id,
-              namaPart,
-              deskripsi,
-              jumlah,
-              unit,
-              "pending",
-              "",
-              "",
-              createdBy,
-              createdAt,
-            ],
-          ],
-        },
+      const { error } = await supabase.from("spareparts").insert({
+        id,
+        nama_part: namaPart,
+        deskripsi,
+        jumlah,
+        unit,
+        status: "pending",
+        tanggal_dipesan: null,
+        tanggal_datang: null,
+        created_by: createdBy,
+        created_at: createdAt,
       });
+      if (error) throw error;
 
       return res.status(201).json({
         success: true,
@@ -90,7 +75,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // PUT - Update sparepart
     if (req.method === "PUT") {
       const {
         id,
@@ -101,126 +85,60 @@ export default async function handler(req, res) {
         status,
         tanggalDipesan,
         tanggalDatang,
-        createdBy,
-        createdAt,
       } = req.body;
 
-      const getResponse = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_NAME}!A2:J`,
-      });
+      const { data: existing } = await supabase
+        .from("spareparts")
+        .select("id")
+        .eq("id", id)
+        .limit(1);
 
-      const rows = getResponse.data.values || [];
-      const rowIndex = rows.findIndex((row) => row[0] === id);
-
-      if (rowIndex === -1) {
-        return res
-          .status(404)
-          .json({ success: false, error: "Sparepart tidak ditemukan" });
+      if (!existing || existing.length === 0) {
+        return res.status(404).json({ success: false, error: "Sparepart tidak ditemukan" });
       }
 
-      const sheetRow = rowIndex + 2;
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_NAME}!A${sheetRow}:J${sheetRow}`,
-        valueInputOption: "RAW",
-        requestBody: {
-          values: [
-            [
-              id,
-              namaPart,
-              deskripsi,
-              jumlah,
-              unit,
-              status,
-              tanggalDipesan,
-              tanggalDatang,
-              createdBy,
-              createdAt,
-            ],
-          ],
-        },
-      });
-
-      return res.status(200).json({
-        success: true,
-        data: {
-          id,
-          namaPart,
+      const { error } = await supabase
+        .from("spareparts")
+        .update({
+          nama_part: namaPart,
           deskripsi,
           jumlah,
           unit,
           status,
-          tanggalDipesan,
-          tanggalDatang,
-          createdBy,
-          createdAt,
-        },
+          tanggal_dipesan: tanggalDipesan || null,
+          tanggal_datang: tanggalDatang || null,
+        })
+        .eq("id", id);
+      if (error) throw error;
+
+      return res.status(200).json({
+        success: true,
+        data: { id, namaPart, deskripsi, jumlah, unit, status, tanggalDipesan, tanggalDatang },
       });
     }
 
-    // DELETE - Hapus sparepart
     if (req.method === "DELETE") {
       const { id } = req.body;
 
-      const getResponse = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_NAME}!A2:J`,
-      });
+      const { data: existing } = await supabase
+        .from("spareparts")
+        .select("id")
+        .eq("id", id)
+        .limit(1);
 
-      const rows = getResponse.data.values || [];
-      const rowIndex = rows.findIndex((row) => row[0] === id);
-
-      if (rowIndex === -1) {
-        return res
-          .status(404)
-          .json({ success: false, error: "Sparepart tidak ditemukan" });
+      if (!existing || existing.length === 0) {
+        return res.status(404).json({ success: false, error: "Sparepart tidak ditemukan" });
       }
 
-      // Get sheet metadata to find sheetId
-      const spreadsheet = await sheets.spreadsheets.get({
-        spreadsheetId: SPREADSHEET_ID,
-      });
-
-      const sheet = spreadsheet.data.sheets.find(
-        (s) => s.properties.title === SHEET_NAME
-      );
-
-      if (!sheet) {
-        return res
-          .status(404)
-          .json({ success: false, error: "Sheet tidak ditemukan" });
-      }
-
-      const sheetId = sheet.properties.sheetId;
-      const sheetRow = rowIndex + 2;
-
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: SPREADSHEET_ID,
-        requestBody: {
-          requests: [
-            {
-              deleteDimension: {
-                range: {
-                  sheetId: sheetId,
-                  dimension: "ROWS",
-                  startIndex: sheetRow - 1,
-                  endIndex: sheetRow,
-                },
-              },
-            },
-          ],
-        },
-      });
+      const { error } = await supabase.from("spareparts").delete().eq("id", id);
+      if (error) throw error;
 
       return res.status(200).json({ success: true });
     }
 
-    return res
-      .status(405)
-      .json({ success: false, error: "Method not allowed" });
+    return res.status(405).json({ success: false, error: "Method not allowed" });
   } catch (error) {
     console.error("Spareparts API Error:", error);
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 }

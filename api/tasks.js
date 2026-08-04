@@ -1,194 +1,121 @@
 // api/tasks.js
-import { google } from "googleapis";
+// Migrasi dari Google Sheets API -> Supabase
+import { getSupabase } from "./_lib/supabase.js";
+import { getCorsHeaders, sanitizeError } from "./_lib/helpers.js";
 
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-const SHEET_NAME = "Tasks";
-
-const getGoogleAuth = () => {
-  const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
-  return new google.auth.GoogleAuth({
-    credentials,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
-};
+const supabase = getSupabase();
 
 export default async function handler(req, res) {
+  const corsHeaders = getCorsHeaders(req);
+  Object.entries(corsHeaders).forEach(([k, v]) => res.setHeader(k, v));
+
   if (req.method === "OPTIONS") {
-    return res.status(200).json({});
+    return res.status(200).end();
   }
 
   try {
-    const auth = getGoogleAuth();
-    const sheets = google.sheets({ version: "v4", auth });
 
-    // GET - Ambil semua task
+  try {
     if (req.method === "GET") {
-      const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_NAME}!A2:I`,
-      });
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
 
-      const rows = response.data.values || [];
-      const tasks = rows.map((row) => {
-        let progressLogs = [];
-        try {
-          progressLogs = row[8] ? JSON.parse(row[8]) : [];
-        } catch (e) {
-          progressLogs = [];
-        }
+      const mapped = data.map((row) => ({
+        id: row.id,
+        namaTask: row.nama_task,
+        deskripsi: row.deskripsi,
+        prioritas: row.prioritas,
+        deadline: row.deadline,
+        progress: row.progress,
+        status: row.status,
+        createdAt: row.created_at,
+        progressLogs: row.progress_logs || [],
+      }));
 
-        return {
-          id: row[0],
-          namaTask: row[1],
-          deskripsi: row[2],
-          prioritas: row[3],
-          deadline: row[4],
-          progress: parseInt(row[5]) || 0,
-          status: row[6],
-          createdAt: row[7],
-          progressLogs: progressLogs,
-        };
-      });
-
-      return res.status(200).json({ success: true, data: tasks });
+      return res.status(200).json({ success: true, data: mapped });
     }
 
-    // POST - Tambah task baru
     if (req.method === "POST") {
       const data = req.body;
-      const newRow = [
-        data.id,
-        data.namaTask,
-        data.deskripsi,
-        data.prioritas || "medium",
-        data.deadline || "",
-        data.progress || 0,
-        data.progress >= 100 ? "selesai" : "berlangsung",
-        data.createdAt,
-        JSON.stringify(data.progressLogs || []),
-      ];
+      const progress = data.progress || 0;
 
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_NAME}!A:I`,
-        valueInputOption: "USER_ENTERED",
-        resource: {
-          values: [newRow],
-        },
+      const { error } = await supabase.from("tasks").insert({
+        id: data.id,
+        nama_task: data.namaTask,
+        deskripsi: data.deskripsi,
+        prioritas: data.prioritas || "medium",
+        deadline: data.deadline || null,
+        progress,
+        status: progress >= 100 ? "selesai" : "berlangsung",
+        created_at: data.createdAt || new Date().toISOString(),
+        progress_logs: data.progressLogs || [],
       });
+      if (error) throw error;
 
-      return res
-        .status(201)
-        .json({ success: true, message: "Task berhasil ditambahkan" });
+      return res.status(201).json({ success: true, message: "Task berhasil ditambahkan" });
     }
 
-    // PUT - Update task
     if (req.method === "PUT") {
       const data = req.body;
 
-      const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_NAME}!A2:A`,
-      });
+      const { data: existing } = await supabase
+        .from("tasks")
+        .select("id")
+        .eq("id", String(data.id))
+        .limit(1);
 
-      const rows = response.data.values || [];
-      const rowIndex = rows.findIndex((row) => row[0] === String(data.id));
-
-      if (rowIndex === -1) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Task tidak ditemukan" });
+      if (!existing || existing.length === 0) {
+        return res.status(404).json({ success: false, message: "Task tidak ditemukan" });
       }
 
-      const actualRowNumber = rowIndex + 2;
-      const updatedRow = [
-        data.id,
-        data.namaTask,
-        data.deskripsi,
-        data.prioritas || "medium",
-        data.deadline || "",
-        data.progress || 0,
-        data.progress >= 100 ? "selesai" : "berlangsung",
-        data.updatedAt || data.createdAt,
-        JSON.stringify(data.progressLogs || []),
-      ];
+      const progress = data.progress || 0;
 
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_NAME}!A${actualRowNumber}:I${actualRowNumber}`,
-        valueInputOption: "USER_ENTERED",
-        resource: {
-          values: [updatedRow],
-        },
-      });
+      const { error } = await supabase
+        .from("tasks")
+        .update({
+          nama_task: data.namaTask,
+          deskripsi: data.deskripsi,
+          prioritas: data.prioritas || "medium",
+          deadline: data.deadline || null,
+          progress,
+          status: progress >= 100 ? "selesai" : "berlangsung",
+          progress_logs: data.progressLogs || [],
+        })
+        .eq("id", data.id);
+      if (error) throw error;
 
-      return res
-        .status(200)
-        .json({ success: true, message: "Task berhasil diupdate" });
+      return res.status(200).json({ success: true, message: "Task berhasil diupdate" });
     }
 
-    // DELETE - Hapus task
     if (req.method === "DELETE") {
       const { id } = req.query;
 
-      const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_NAME}!A2:A`,
-      });
+      const { data: existing } = await supabase
+        .from("tasks")
+        .select("id")
+        .eq("id", String(id))
+        .limit(1);
 
-      const rows = response.data.values || [];
-      const rowIndex = rows.findIndex((row) => row[0] === String(id));
-
-      if (rowIndex === -1) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Task tidak ditemukan" });
+      if (!existing || existing.length === 0) {
+        return res.status(404).json({ success: false, message: "Task tidak ditemukan" });
       }
 
-      const actualRowNumber = rowIndex + 2;
+      const { error } = await supabase.from("tasks").delete().eq("id", id);
+      if (error) throw error;
 
-      // Get sheet info to find correct sheetId
-      const sheetInfo = await sheets.spreadsheets.get({
-        spreadsheetId: SPREADSHEET_ID,
-      });
-
-      const taskSheet = sheetInfo.data.sheets.find(
-        (s) => s.properties.title === SHEET_NAME
-      );
-      const sheetId = taskSheet ? taskSheet.properties.sheetId : 1;
-
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: SPREADSHEET_ID,
-        resource: {
-          requests: [
-            {
-              deleteDimension: {
-                range: {
-                  sheetId: sheetId,
-                  dimension: "ROWS",
-                  startIndex: actualRowNumber - 1,
-                  endIndex: actualRowNumber,
-                },
-              },
-            },
-          ],
-        },
-      });
-
-      return res
-        .status(200)
-        .json({ success: true, message: "Task berhasil dihapus" });
+      return res.status(200).json({ success: true, message: "Task berhasil dihapus" });
     }
 
-    return res
-      .status(405)
-      .json({ success: false, message: "Method not allowed" });
+    return res.status(405).json({ success: false, message: "Method not allowed" });
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Tasks API Error:", error);
     return res.status(500).json({
       success: false,
       message: "Terjadi kesalahan server",
-      error: error.message,
+      error: sanitizeError(error),
     });
   }
 }
