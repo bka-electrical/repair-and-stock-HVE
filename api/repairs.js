@@ -233,10 +233,23 @@ export default async function handler(req, res) {
       }
 
       if (action === "getComponents") {
+        // Frontend mengirim NAMA kategori (dropdown pakai nama_kategori sebagai value),
+        // jadi perlu diterjemahkan dulu ke id_kategori sebelum query ke tb_komponen_detail
+        const { data: kategoriRows } = await supabase
+          .from("tb_kategori_sparepart")
+          .select("id_kategori")
+          .eq("nama_kategori", id_kategori)
+          .limit(1);
+
+        const idKategoriAsli = kategoriRows && kategoriRows.length > 0 ? kategoriRows[0].id_kategori : null;
+        if (!idKategoriAsli) {
+          return res.status(200).json({ success: true, data: [] });
+        }
+
         const { data, error } = await supabase
           .from("tb_komponen_detail")
           .select("*")
-          .eq("id_kategori", id_kategori);
+          .eq("id_kategori", idKategoriAsli);
         if (error) throw error;
         return res.status(200).json({ success: true, data });
       }
