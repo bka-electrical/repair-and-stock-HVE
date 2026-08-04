@@ -229,7 +229,6 @@ export default async function handler(req, res) {
       const { data, error } = await supabase
         .from("tb_perbaikan")
         .select("*");
-      console.log("[repairs] tb_perbaikan raw data count:", (data || []).length, "error:", error);
       if (error) throw error;
       const active = (data || []).filter((r) => {
         const s = String(r.status_perbaikan || "");

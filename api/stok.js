@@ -171,7 +171,8 @@ export default async function handler(req, res) {
           const { error } = await supabase
             .from("tb_status_restock")
             .update({ status_dipesan: true, last_reminder: new Date().toISOString() })
-            .eq("id_komponen", id_komponen);
+            .eq("id_komponen", id_komponen)
+            .eq("tipe_stok", tipe_stok);
           if (error) throw error;
         } else {
           const { error } = await supabase.from("tb_status_restock").insert({

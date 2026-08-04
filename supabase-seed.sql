@@ -29,10 +29,11 @@ INSERT INTO public.tb_stok_din_rad (id_stok_din_rad, id_komponen, kompatibilitas
 ON CONFLICT (id_stok_din_rad) DO NOTHING;
 
 -- 5. Sample data perbaikan (jika tabel tb_perbaikan masih kosong)
+--    Format ID: PREFIX-XXXX (4 digit, auto-increment via generateTicketId)
 INSERT INTO public.tb_perbaikan (id_perbaikan, nama_unit, id_mesin, id_kategori_sparepart, lokasi_operasi, tgl_masuk, status_perbaikan, catatan) VALUES
-  ('DA-001', 'Excavator 01', 'MES-001', 'Dinamo Amper', 'Depo 4', '2024-01-15', 'Menunggu Pengecekan', 'Cek dinamo amper'),
-  ('DS-001', 'Dump Truck 02', 'MES-002', 'Dinamo Starter', 'Workshop', '2024-01-16', 'Dalam Pengerjaan', 'Ganti starter'),
-  ('RD-001', 'Excavator 01', 'MES-001', 'Radiator', 'Lapangan', '2024-01-17', 'Selesai', 'Selesai radiator')
+  ('DA-0001', 'Excavator 01', 'MES-001', 'Dinamo Amper', 'Depo 4', '2024-01-15', 'Menunggu Pengecekan', 'Cek dinamo amper'),
+  ('DS-0001', 'Dump Truck 02', 'MES-002', 'Dinamo Starter', 'Workshop', '2024-01-16', 'Dalam Pengerjaan', 'Ganti starter'),
+  ('RD-0001', 'Excavator 01', 'MES-001', 'Radiator', 'Lapangan', '2024-01-17', 'Selesai', 'Selesai radiator')
 ON CONFLICT (id_perbaikan) DO NOTHING;
 
 -- Cek data yang sudah ada:
