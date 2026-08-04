@@ -34,7 +34,9 @@ export default function LaporanPekerjaan() {
     status_perbaikan: "Menunggu Pengecekan",
     catatan: "",
     tgl_masuk: new Date().toISOString().split("T")[0],
-    tgl_keluar: ""
+    tgl_keluar: "",
+    riwayat_no_kabel: "",   // <- baru
+    riwayat_sisa: ""       // <- baru
   });
 
   useEffect(() => {
@@ -134,7 +136,9 @@ export default function LaporanPekerjaan() {
         status_perbaikan: "Menunggu Pengecekan",
         catatan: "",
         tgl_masuk: new Date().toISOString().split("T")[0],
-        tgl_keluar: ""
+        tgl_keluar: "",
+        riwayat_no_kabel: "",   // <- baru
+        riwayat_sisa: ""       // <- baru
       });
       setSelectedKomponen([]);
       setKomponenList([]);
@@ -627,6 +631,31 @@ export default function LaporanPekerjaan() {
                       {categories.map(c => <option key={c.id_kategori} value={c.nama_kategori}>{c.nama_kategori}</option>)}
                     </select>
                   </div>
+
+                  {repairFormData.id_kategori_sparepart === 'Accu' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-200 mb-2">Riwayat No. Kabel</label>
+                        <input
+                          type="text"
+                          className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white"
+                          placeholder="Masukkan riwayat nomor kabel"
+                          value={repairFormData.riwayat_no_kabel}
+                          onChange={e => setRepairFormData({ ...repairFormData, riwayat_no_kabel: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-200 mb-2">Riwayat Sekun</label>
+                        <input
+                          type="text"
+                          className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white"
+                          placeholder="Masukkan riwayat sekun"
+                          value={repairFormData.riwayat_sekun}
+                          onChange={e => setRepairFormData({ ...repairFormData, riwayat_sekun: e.target.value })}
+                        />
+                      </div>
+                    </>
+                  )}
 
                    {(komponenLoading || komponenList.length > 0) && (
                      <div>
