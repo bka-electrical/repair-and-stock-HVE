@@ -184,9 +184,10 @@ async function insertAccuRecord(idPerbaikan, komponenList, riwayatNoKabel, riway
     if (!rows || rows.length === 0) continue;
 
     const idKomponen = String(rows[0].id_komponen || "");
-    if (idKomponen.startsWith("ACU-K")) {
+    const namaKomponen = String(rows[0].nama_komponen || "").toLowerCase();
+    if (idKomponen.startsWith("ACU-K") || namaKomponen.includes("kabel")) {
       namaKabel.push(rows[0].nama_komponen);
-    } else if (idKomponen.startsWith("ACU-S")) {
+    } else if (idKomponen.startsWith("ACU-S") || namaKomponen.includes("sekun")) {
       namaSekun.push(rows[0].nama_komponen);
     }
   }
@@ -307,7 +308,7 @@ export default async function handler(req, res) {
           idPerbaikan,
           payload.komponen,
           payload.riwayat_no_kabel,
-          payload.riwayat_sisa ?? payload.riwayat_sisa
+          payload.riwayat_sisa ?? payload.riwayat_sekun
         );
       }
 
