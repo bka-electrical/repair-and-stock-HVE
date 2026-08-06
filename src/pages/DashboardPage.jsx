@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from "react";
-import { Activity, Box, CheckCircle, Globe, Package, Sparkles, Truck, Wrench } from "lucide-react";
+import { Activity, Box, CheckCircle, Globe, Package, Sparkles, Truck, Wrench, Hammer } from "lucide-react";
 
 const overviewItems = [
   { label: "Dinamo Amper", keywords: ["dinamo amper", "amper", "dinamo"], color: "from-amber-500 to-orange-500" },
   { label: "Dinamo Starter", keywords: ["dinamo starter", "starter"], color: "from-cyan-500 to-blue-500" },
   { label: "Radiator", keywords: ["radiator"], color: "from-violet-500 to-fuchsia-500" },
   { label: "Elektrik SPIL", keywords: ["elektrik spil", "spil", "elektrik"], color: "from-emerald-500 to-teal-500" },
-  { label: "Elektrik Maker", keywords: ["elektrik maker", "maker"], color: "from-indigo-500 to-sky-500" }
+  { label: "Elektrik Maker", keywords: ["elektrik maker", "maker"], color: "from-indigo-500 to-sky-500" },
+  { label: "Accu", keywords: ["accu"], color: "from-yellow-500 to-amber-500" }
 ];
 
 const normalizeText = (value) => String(value || "").toLowerCase();
@@ -25,7 +26,10 @@ export default function DashboardPage({
   onNavigateRepair,
   onNavigateStock,
   onNavigateArchive,
-  onNavigateTerkirim
+  onNavigateTerkirim,
+  onNavigateRepairWithCategory,
+  onNavigateDinamoReady,
+  dinamoReadyCount,
 }) {
   const [selectedTask, setSelectedTask] = useState(null);
   const [locale, setLocale] = useState('id');
@@ -37,7 +41,7 @@ export default function DashboardPage({
       headerSubtitle: 'Ringkas aktivitas servis dan stok komponen dalam satu tampilan.',
       quickAction: 'Aksi Cepat',
       quickSubtitle: 'Mulai dari sini',
-      repairButton: 'Perbaikan Baru',
+      repairButton: 'Perbaikan',
       repairButtonSubtitle: 'Langsung ke sistem servis bengkel.',
       stockButton: 'Suku Cadang',
       stockButtonSubtitle: 'Buka halaman stok komponen.',
@@ -45,10 +49,12 @@ export default function DashboardPage({
       statsHeading: 'Jumlah tugas sedang berjalan',
       ongoing: 'Tugas Berlangsung',
       noTasks: 'Belum ada tugas aktif.',
-      done: 'Tugas Selesai',
-      doneSubtitle: 'Lihat riwayat perbaikan yang telah selesai.',
-      sent: 'Terkirim',
-      sentSubtitle: 'Halaman terkirim sementara belum diisi.',
+       done: 'Tugas Selesai',
+       doneSubtitle: 'Lihat riwayat perbaikan yang telah selesai.',
+       sent: 'Terkirim',
+       sentSubtitle: 'Lihat halaman surat jalan yang terkirim.',
+       dinamoReady: 'Dinamo Ready',
+       dinamoReadySubtitle: 'Kelola dinamo siap pasang.',
       summaryLabel: 'Ringkasan Suku Cadang',
       summaryHeading: 'Stok Penting',
       outOfStock: 'Habis',
@@ -71,7 +77,7 @@ export default function DashboardPage({
       headerSubtitle: 'Summarizes service activity and component stock in one view.',
       quickAction: 'Quick Actions',
       quickSubtitle: 'Start from here',
-      repairButton: 'New Repair',
+      repairButton: 'Repair',
       repairButtonSubtitle: 'Go to the workshop service system.',
       stockButton: 'Spare Parts',
       stockButtonSubtitle: 'Open the component stock page.',
@@ -174,6 +180,22 @@ export default function DashboardPage({
               <p className="text-lg font-semibold text-white">{t.stockButton}</p>
               <p className="mt-2 text-sm text-slate-300">{t.stockButtonSubtitle}</p>
             </button>
+
+            <button onClick={onNavigateTerkirim} className="group rounded-3xl border border-slate-800 bg-gradient-to-br from-purple-600 to-indigo-600 p-6 text-left shadow-xl transition hover:-translate-y-1 hover:shadow-2xl">
+              <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 text-white shadow-sm">
+                <Truck size={28} />
+              </div>
+              <p className="text-lg font-semibold text-white">{t.sent}</p>
+              <p className="mt-2 text-sm text-slate-300">{t.sentSubtitle}</p>
+            </button>
+
+            <button onClick={onNavigateDinamoReady} className="group rounded-3xl border border-slate-800 bg-gradient-to-br from-amber-600 to-orange-600 p-6 text-left shadow-xl transition hover:-translate-y-1 hover:shadow-2xl">
+              <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 text-white shadow-sm">
+                <Hammer size={28} />
+              </div>
+              <p className="text-lg font-semibold text-white">{t.dinamoReady}</p>
+              <p className="mt-2 text-sm text-slate-300">{t.dinamoReadySubtitle}</p>
+            </button>
           </div>
         </section>
 
@@ -203,30 +225,42 @@ export default function DashboardPage({
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <button onClick={onNavigateRepair} className="group rounded-3xl border border-slate-800 bg-slate-900/90 p-4 text-left shadow-sm transition hover:border-emerald-400 max-h-[380px] overflow-hidden flex h-full flex-col justify-between">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">{t.ongoing}</p>
-                    <p className="mt-2 text-3xl font-bold text-white">{inProgressCount}</p>
-                  </div>
-                  <div className="rounded-2xl bg-slate-800 p-3 text-emerald-400">
-                    <Activity size={20} />
-                  </div>
-                </div>
-                <div className="mt-4 max-h-[220px] space-y-2 overflow-y-auto pr-1">
-                  {latestTasks.length === 0 ? (
-                    <p className="text-sm text-slate-400">Belum ada tugas aktif.</p>
-                  ) : latestTasks.map(task => (
-                    <div key={task.id_perbaikan} onClick={(e) => { e.stopPropagation(); setSelectedTask(task); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setSelectedTask(task); } }} role="button" tabIndex={0} className="w-full rounded-3xl border border-slate-800 bg-slate-950/80 px-3 py-3 text-left transition hover:border-emerald-400 cursor-pointer">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold text-white">{task.nama_unit || task.id_perbaikan || "Tugas Baru"}</p>
-                        <span className="rounded-full bg-slate-800 px-2 py-1 text-[11px] font-medium text-slate-300">{task.status_perbaikan || "Dalam Pengerjaan"}</span>
+              {overviewItems.map((item) => {
+                const categoryTasks = activeRepairs.filter(repair => matchesKeywords(repair, item.keywords));
+                const sortedTasks = [...categoryTasks]
+                  .sort((a, b) => new Date(b.tgl_masuk || 0) - new Date(a.tgl_masuk || 0))
+                  .slice(0, 5);
+                return (
+                  <button
+                    key={item.label}
+                    onClick={() => onNavigateRepairWithCategory && onNavigateRepairWithCategory(item.keywords[0])}
+                    className="group rounded-3xl border border-slate-800 bg-slate-900/90 p-4 text-left shadow-sm transition hover:border-emerald-400 max-h-[380px] overflow-hidden flex h-full flex-col justify-between"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">{item.label}</p>
+                        <p className="mt-2 text-3xl font-bold text-white">{categoryTasks.length}</p>
                       </div>
-                      <p className="mt-1 text-xs text-slate-400">{task.lokasiOperasi || "Lokasi tidak tersedia"}</p>
+                      <div className={`rounded-2xl bg-slate-800 p-3 text-emerald-400`}>
+                        <Activity size={20} />
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </button>
+                    <div className="mt-4 max-h-[220px] space-y-2 overflow-y-auto pr-1">
+                      {sortedTasks.length === 0 ? (
+                        <p className="text-sm text-slate-400">{t.noTasks}</p>
+                      ) : sortedTasks.map(task => (
+                        <div key={task.id_perbaikan} onClick={(e) => { e.stopPropagation(); setSelectedTask(task); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setSelectedTask(task); } }} role="button" tabIndex={0} className="w-full rounded-3xl border border-slate-800 bg-slate-950/80 px-3 py-3 text-left transition hover:border-emerald-400 cursor-pointer">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-semibold text-white">{task.nama_unit || task.id_perbaikan || "Tugas Baru"}</p>
+                            <span className="rounded-full bg-slate-800 px-2 py-1 text-[11px] font-medium text-slate-300">{task.status_perbaikan || "Dalam Pengerjaan"}</span>
+                          </div>
+                          <p className="mt-1 text-xs text-slate-400">{task.lokasiOperasi || "Lokasi tidak tersedia"}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
 
               <button onClick={onNavigateArchive} className="rounded-3xl border border-slate-800 bg-slate-900/90 p-5 text-left shadow-sm transition hover:border-sky-400 h-full flex flex-col justify-between">
                 <div className="flex items-start justify-between gap-3">
@@ -241,19 +275,32 @@ export default function DashboardPage({
                 </div>
               </button>
 
-              <button onClick={onNavigateTerkirim} className="rounded-3xl border border-slate-800 bg-slate-900/90 p-5 text-left shadow-sm transition hover:border-purple-400 h-full flex flex-col justify-between">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-300">{t.sent}</p>
-                    <p className="mt-2 text-3xl font-bold text-white">{sentCount}</p>
-                    <p className="mt-2 text-sm text-slate-400">{t.sentSubtitle}</p>
-                  </div>
-                  <div className="rounded-2xl bg-slate-800 p-3 text-purple-400">
-                    <Truck size={20} />
-                  </div>
-                </div>
-              </button>
-            </div>
+               <button onClick={onNavigateTerkirim} className="rounded-3xl border border-slate-800 bg-slate-900/90 p-5 text-left shadow-sm transition hover:border-purple-400 h-full flex flex-col justify-between">
+                 <div className="flex items-start justify-between gap-3">
+                   <div>
+                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-300">{t.sent}</p>
+                     <p className="mt-2 text-3xl font-bold text-white">{sentCount}</p>
+                     <p className="mt-2 text-sm text-slate-400">{t.sentSubtitle}</p>
+                   </div>
+                   <div className="rounded-2xl bg-slate-800 p-3 text-purple-400">
+                     <Truck size={20} />
+                   </div>
+                 </div>
+               </button>
+
+               <button onClick={onNavigateDinamoReady} className="rounded-3xl border border-slate-800 bg-slate-900/90 p-5 text-left shadow-sm transition hover:border-amber-400 h-full flex flex-col justify-between">
+                 <div className="flex items-start justify-between gap-3">
+                   <div>
+                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">{t.dinamoReady}</p>
+                     <p className="mt-2 text-3xl font-bold text-white">{dinamoReadyCount}</p>
+                     <p className="mt-2 text-sm text-slate-400">{t.dinamoReadySubtitle}</p>
+                   </div>
+                   <div className="rounded-2xl bg-slate-800 p-3 text-amber-400">
+                     <Hammer size={20} />
+                   </div>
+                 </div>
+               </button>
+             </div>
           </div>
         </section>
 

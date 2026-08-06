@@ -25,15 +25,22 @@ function getCategoryPrefix(namaKategori) {
   return CATEGORY_PREFIX[key] || "TIK";
 }
 
-// Generate ID tiket, format: DA-001, RD-002, dst
+// Generate ID tiket, format: DA-0001, RD-0002, dst
 async function generateTicketId(prefix) {
   const { data, error } = await supabase
     .from("tb_perbaikan")
     .select("id_perbaikan")
     .like("id_perbaikan", `${prefix}-%`);
   if (error) throw error;
-  const count = (data || []).length + 1;
-  return `${prefix}-${String(count).padStart(3, "0")}`;
+
+  let maxSeq = 0;
+  (data || []).forEach((row) => {
+    const parts = String(row.id_perbaikan).split("-");
+    const num = parseInt(parts[1], 10);
+    if (!isNaN(num) && num > maxSeq) maxSeq = num;
+  });
+
+  return `${prefix}-${String(maxSeq + 1).padStart(4, "0")}`;
 }
 
 // Generate ID riwayat stok, format: RSTE-001 (elektrik) / RSDR-001 (dinamo/radiator)
@@ -45,8 +52,15 @@ async function generateRiwayatId(isElektrik) {
     .select("id_riwayat")
     .like("id_riwayat", `${prefix}-%`);
   if (error) throw error;
-  const count = (data || []).length + 1;
-  return `${prefix}-${String(count).padStart(3, "0")}`;
+
+  let maxSeq = 0;
+  (data || []).forEach((row) => {
+    const parts = String(row.id_riwayat).split("-");
+    const num = parseInt(parts[1], 10);
+    if (!isNaN(num) && num > maxSeq) maxSeq = num;
+  });
+
+  return `${prefix}-${String(maxSeq + 1).padStart(3, "0")}`;
 }
 
 // Kurangi stok elektrik + catat riwayat (Keluar)
@@ -273,76 +287,258 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, data });
       }
 
-      // Default: antrean aktif (bukan Selesai/Afkir)
-      const { data, error } = await supabase
-        .from("tb_perbaikan")
-        .select("*")
-        .not("status_perbaikan", "in", '("Selesai","Afkir")');
-      if (error) throw error;
-      return res.status(200).json({ success: true, data });
+      // Default: antrean aktif (bukan Selesai/Afkir).
+      // Hanya jalankan ini tanpa action; action lain diproses di bawah.
+      if (!action) {
+        const { data, error } = await supabase
+          .from("tb_perbaikan")
+          .select("*")
+          .not("status_perbaikan", "in", '("Selesai","Afkir")');
+        if (error) throw error;
+        return res.status(200).json({ success: true, data });
+      }
     }
 
     if (method === "POST") {
-      const payload = req.body;
-      const kategoriSparepart = String(payload.id_kategori_sparepart || "").trim();
-      const kategoriSparepartLower = kategoriSparepart.toLowerCase();
-      const prefix = getCategoryPrefix(payload.id_kategori_sparepart);
-      const idPerbaikan = await generateTicketId(prefix);
+      if (!req.query.action) {
+        const payload = req.body;
+        const kategoriSparepart = String(payload.id_kategori_sparepart || "").trim();
+        const kategoriSparepartLower = kategoriSparepart.toLowerCase();
+        const prefix = getCategoryPrefix(payload.id_kategori_sparepart);
+        const idPerbaikan = await generateTicketId(prefix);
 
-      const { error } = await supabase.from("tb_perbaikan").insert({
-        id_perbaikan: idPerbaikan,
-        nama_unit: payload.nama_unit || "",
-        id_mesin: payload.id_mesin || "",
-        id_kategori_sparepart: payload.id_kategori_sparepart,
-        lokasi_operasi: payload.lokasiOperasi || "",
-        tgl_masuk: payload.tgl_masuk || new Date().toISOString().split("T")[0],
-        status_perbaikan: "Menunggu Pengecekan",
-        catatan: payload.deskripsiKerusakan || "",
-      });
-      if (error) throw error;
+        const { error } = await supabase.from("tb_perbaikan").insert({
+          id_perbaikan: idPerbaikan,
+          nama_unit: payload.nama_unit || "",
+          id_mesin: payload.id_mesin || "",
+          id_kategori_sparepart: payload.id_kategori_sparepart,
+          lokasi_operasi: payload.lokasiOperasi || "",
+          tgl_masuk: payload.tgl_masuk || new Date().toISOString().split("T")[0],
+          status_perbaikan: "Menunggu Pengecekan",
+          catatan: payload.deskripsiKerusakan || "",
+        });
+        if (error) throw error;
 
-      await processKomponen(idPerbaikan, payload.komponen, kategoriSparepart, payload.id_mesin);
+        await processKomponen(idPerbaikan, payload.komponen, kategoriSparepart, payload.id_mesin);
 
-      if (kategoriSparepartLower === "accu") {
-        await insertAccuRecord(
-          idPerbaikan,
-          payload.komponen,
-          payload.riwayat_no_kabel,
-          payload.riwayat_sisa ?? payload.riwayat_sekun
-        );
+        if (kategoriSparepartLower === "accu") {
+          await insertAccuRecord(
+            idPerbaikan,
+            payload.komponen,
+            payload.riwayat_no_kabel,
+            payload.riwayat_sisa ?? payload.riwayat_sekun
+          );
+        }
+
+        return res.status(201).json({ success: true, id: idPerbaikan });
       }
-
-      return res.status(201).json({ success: true, id: idPerbaikan });
     }
 
     if (method === "PUT") {
-      const payload = req.body;
-      const idPerbaikan = payload.id_perbaikan;
+      if (!req.query.action) {
+        const payload = req.body;
+        const idPerbaikan = payload.id_perbaikan;
 
-      const updateData = {
-        nama_unit: payload.nama_unit || "",
-        id_mesin: payload.id_mesin || "",
-        status_perbaikan: payload.status,
-        catatan: payload.catatan,
-      };
-      if (payload.tgl_keluar) updateData.tgl_keluar = payload.tgl_keluar;
+        const updateData = {
+          nama_unit: payload.nama_unit || "",
+          id_mesin: payload.id_mesin || "",
+          status_perbaikan: payload.status,
+          catatan: payload.catatan,
+        };
+        if (payload.tgl_keluar) updateData.tgl_keluar = payload.tgl_keluar;
 
-      const { error } = await supabase
-        .from("tb_perbaikan")
-        .update(updateData)
-        .eq("id_perbaikan", idPerbaikan);
-      if (error) throw error;
+        const { error } = await supabase
+          .from("tb_perbaikan")
+          .update(updateData)
+          .eq("id_perbaikan", idPerbaikan);
+        if (error) throw error;
 
-      // Kalau komponen diedit, hapus detail lama & catat ulang (termasuk auto-deduct)
-      if (payload.komponen && Array.isArray(payload.komponen)) {
-        await supabase.from("tb_detail_perbaikan").delete().eq("id_perbaikan", idPerbaikan);
-        await processKomponen(idPerbaikan, payload.komponen, payload.id_kategori_sparepart, payload.id_mesin);
+        // Kalau komponen diedit, hapus detail lama & catat ulang (termasuk auto-deduct)
+        if (payload.komponen && Array.isArray(payload.komponen)) {
+          await supabase.from("tb_detail_perbaikan").delete().eq("id_perbaikan", idPerbaikan);
+          await processKomponen(idPerbaikan, payload.komponen, payload.id_kategori_sparepart, payload.id_mesin);
+        }
+
+        return res.status(200).json({ success: true });
       }
-
-      return res.status(200).json({ success: true });
     }
 
-    return res.status(405).json({ success: false, message: "Method not allowed" });
+    if (method === "GET") {
+      const { action } = req.query;
+      if (action === "getSuratJalan") {
+        const { data, error } = await supabase
+          .from("tb_surat_jalan")
+          .select("*")
+          .order("tanggal_kirim", { ascending: false });
+        if (error) throw error;
+        return res.status(200).json({ success: true, data });
+      }
+
+      if (action === "getDinamoReady") {
+        const { data, error } = await supabase
+          .from("tb_dinamo_ready")
+          .select("*")
+          .order("id_dinamo_ready", { ascending: true });
+        if (error) throw error;
+        return res.status(200).json({ success: true, data });
+      }
+
+      if (action === "getRiwayatKanibal") {
+        const { data, error } = await supabase
+          .from("tb_riwayat_kanibal")
+          .select("*")
+          .order("tanggal_kanibal", { ascending: false });
+        if (error) throw error;
+        return res.status(200).json({ success: true, data });
+      }
+    }
+
+    if (method === "POST") {
+      const { action } = req.query;
+      const data = req.body;
+
+      if (action === "addSuratJalan") {
+        const { error } = await supabase.from("tb_surat_jalan").insert({
+          no_surat_jalan: data.no_surat_jalan || "",
+          tanggal_kirim: data.tanggal_kirim || new Date().toISOString().split("T")[0],
+          tujuan: data.tujuan || "",
+          id_perbaikan: data.id_perbaikan || "",
+          nama_unit: data.nama_unit || "",
+        });
+        if (error) throw error;
+        return res.status(201).json({ success: true });
+      }
+
+      if (action === "addDinamoReady") {
+        const id = await generateDinamoReadyId();
+        const { error } = await supabase.from("tb_dinamo_ready").insert({
+          id_dinamo_ready: id,
+          tipe_dinamo: data.tipe_dinamo || "",
+          id_mesin: data.id_mesin || "",
+          kondisi: data.kondisi || "",
+          keterangan: data.keterangan || "",
+        });
+        if (error) throw error;
+        return res.status(201).json({ success: true, id });
+      }
+
+      if (action === "addRiwayatKanibal") {
+        const id = await generateKanibalId();
+        const { error } = await supabase.from("tb_riwayat_kanibal").insert({
+          id_kanibal: id,
+          id_dinamo_ready: data.id_dinamo_ready || "",
+          id_perbaikan: data.id_perbaikan || "",
+          id_komponen: data.id_komponen || "",
+          tanggal_kanibal: data.tanggal_kanibal || new Date().toISOString(),
+          keterangan: data.keterangan || "",
+        });
+        if (error) throw error;
+        return res.status(201).json({ success: true, id });
+      }
+    }
+
+    if (method === "PUT") {
+      const { action } = req.query;
+      const data = req.body;
+
+      if (action === "updateSuratJalan") {
+        const { error } = await supabase
+          .from("tb_surat_jalan")
+          .update({
+            no_surat_jalan: data.no_surat_jalan,
+            tanggal_kirim: data.tanggal_kirim,
+            tujuan: data.tujuan,
+          })
+          .eq("id_surat_jalan", data.id_surat_jalan);
+        if (error) throw error;
+        return res.status(200).json({ success: true });
+      }
+
+      if (action === "updateDinamoReady") {
+        const { error } = await supabase
+          .from("tb_dinamo_ready")
+          .update({
+            tipe_dinamo: data.tipe_dinamo,
+            id_mesin: data.id_mesin,
+            kondisi: data.kondisi,
+            keterangan: data.keterangan,
+          })
+          .eq("id_dinamo_ready", data.id_dinamo_ready);
+        if (error) throw error;
+        return res.status(200).json({ success: true });
+      }
+
+      if (action === "updateRiwayatKanibal") {
+        const { error } = await supabase
+          .from("tb_riwayat_kanibal")
+          .update({
+            id_dinamo_ready: data.id_dinamo_ready,
+            id_perbaikan: data.id_perbaikan,
+            id_komponen: data.id_komponen,
+            tanggal_kanibal: data.tanggal_kanibal,
+            keterangan: data.keterangan,
+          })
+          .eq("id_kanibal", data.id_kanibal);
+        if (error) throw error;
+        return res.status(200).json({ success: true });
+      }
+    }
+
+// Generate ID kanibal, format: KAN-001, KAN-002, etc.
+async function generateKanibalId() {
+  const { data, error } = await supabase
+    .from("tb_riwayat_kanibal")
+    .select("id_kanibal")
+    .like("id_kanibal", "KAN-%");
+  if (error) throw error;
+
+  let maxSeq = 0;
+  (data || []).forEach((row) => {
+    const parts = String(row.id_kanibal).split("-");
+    const num = parseInt(parts[1], 10);
+    if (!isNaN(num) && num > maxSeq) maxSeq = num;
+  });
+
+  return `KAN-${String(maxSeq + 1).padStart(3, "0")}`;
+}
+
+// Generate ID dinamo ready, format: DRD-001, DRD-002, etc.
+async function generateDinamoReadyId() {
+  const { data, error } = await supabase
+    .from("tb_dinamo_ready")
+    .select("id_dinamo_ready")
+    .like("id_dinamo_ready", "DRD-%");
+  if (error) throw error;
+
+  let maxSeq = 0;
+  (data || []).forEach((row) => {
+    const parts = String(row.id_dinamo_ready).split("-");
+    const num = parseInt(parts[1], 10);
+    if (!isNaN(num) && num > maxSeq) maxSeq = num;
+  });
+
+  return `DRD-${String(maxSeq + 1).padStart(3, "0")}`;
+}
+
+      if (action === "deleteDinamoReady") {
+        const { error } = await supabase
+          .from("tb_dinamo_ready")
+          .delete()
+          .eq("id_dinamo_ready", data.id_dinamo_ready);
+        if (error) throw error;
+        return res.status(200).json({ success: true });
+      }
+
+      if (action === "deleteRiwayatKanibal") {
+        const { error } = await supabase
+          .from("tb_riwayat_kanibal")
+          .delete()
+          .eq("id_kanibal", data.id_kanibal);
+        if (error) throw error;
+        return res.status(200).json({ success: true });
+      }
+
+      return res.status(405).json({ success: false, message: "Method not allowed" });
   } catch (error) {
     console.error("Repairs API Error:", error);
     return res.status(500).json({ success: false, message: error.message });

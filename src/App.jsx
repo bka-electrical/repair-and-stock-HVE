@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Plus, X, RefreshCw, Wrench, Package, CheckCircle, Search, ArrowLeft } from "lucide-react";
+import { Plus, X, RefreshCw, Wrench, Package, CheckCircle, Search, ArrowLeft, LayoutGrid, Home, Settings, Truck } from "lucide-react";
 import { repairsAPI } from "./api";
 import StokPage from "./pages/StokPage";
 import DashboardPage from "./pages/DashboardPage";
 import TerkirimPage from "./pages/TerkirimPage";
+import DinamoReadyPage from "./pages/DinamoReadyPage";
 
 export default function LaporanPekerjaan() {
   const [repairs, setRepairs] = useState([]);
@@ -13,7 +14,7 @@ export default function LaporanPekerjaan() {
   const [view, setView] = useState('active'); // 'active' | 'archive'
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [groupBy, setGroupBy] = useState('none'); // 'none' | 'id_perbaikan' | 'id_kategori_sparepart' | 'lokasiOperasi'
+  const [groupBy, setGroupBy] = useState('none'); // 'none' | specific category name
   const [units, setUnits] = useState([]);
   const [categories, setCategories] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -23,8 +24,9 @@ export default function LaporanPekerjaan() {
   const [komponenLoading, setKomponenLoading] = useState(false);
   const [komponenStock, setKomponenStock] = useState({});
   const [stockSummary, setStockSummary] = useState({ outOfStock: 0, lowStock: 0 });
+  const [dinamoReadyCount, setDinamoReadyCount] = useState(0);
   const komponenLoadIdRef = useRef(0);
-  const [page, setPage] = useState('dashboard'); // 'dashboard' | 'perbaikan' | 'stok' | 'terkirim'
+  const [page, setPage] = useState('dashboard'); // 'dashboard' | 'perbaikan' | 'stok' | 'terkirim' | 'dinamoready'
   const [repairFormData, setRepairFormData] = useState({
     nama_unit: "",
     id_mesin: "",
@@ -43,6 +45,8 @@ export default function LaporanPekerjaan() {
     loadQueue();
     loadMasterData();
     loadStockSummary();
+    loadDinamoReadyCount();
+    loadArchive();
   }, []);
 
   useEffect(() => {
@@ -62,6 +66,13 @@ export default function LaporanPekerjaan() {
       }).length;
       setStockSummary({ outOfStock, lowStock });
     } catch (e) { console.error('Stock summary fail', e); }
+  };
+
+  const loadDinamoReadyCount = async () => {
+    try {
+      const data = await repairsAPI.getDinamoReady();
+      setDinamoReadyCount(Array.isArray(data) ? data.length : 0);
+    } catch (e) { console.error('Dinamo Ready count fail', e); }
   };
 
   const loadMasterData = async () => {
@@ -94,6 +105,13 @@ export default function LaporanPekerjaan() {
   const navigateToRepair = () => {
     setView('active');
     setPage('perbaikan');
+    setGroupBy('none');
+  };
+
+  const navigateToRepairWithCategory = (categoryKeyword) => {
+    setView('active');
+    setPage('perbaikan');
+    setGroupBy(categoryKeyword);
   };
 
   const navigateToStock = () => {
@@ -103,6 +121,10 @@ export default function LaporanPekerjaan() {
   const navigateToArchive = () => {
     setView('archive');
     setPage('perbaikan');
+  };
+
+  const navigateToDinamoReady = () => {
+    setPage('dinamoready');
   };
 
   const navigateToTerkirim = () => {
@@ -247,7 +269,8 @@ export default function LaporanPekerjaan() {
       String(mesinData?.nama_mesin || repair.id_mesin || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       String(repair.lokasiOperasi || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       String(repair.deskripsiKerusakan || '').toLowerCase().includes(searchTerm.toLowerCase());
-    return matchStatus && matchSearch;
+    const matchCategory = groupBy === 'none' || String(repair.id_kategori_sparepart || '').toLowerCase() === groupBy.toLowerCase();
+    return matchStatus && matchSearch && matchCategory;
   });
 
   const filteredArchive = archive.filter(repair => {
@@ -259,7 +282,8 @@ export default function LaporanPekerjaan() {
       String(mesinData?.nama_mesin || repair.id_mesin || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       String(repair.lokasiOperasi || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       String(repair.deskripsiKerusakan || '').toLowerCase().includes(searchTerm.toLowerCase());
-    return matchStatus && matchSearch;
+    const matchCategory = groupBy === 'none' || String(repair.id_kategori_sparepart || '').toLowerCase() === groupBy.toLowerCase();
+    return matchStatus && matchSearch && matchCategory;
   });
 
   const groupData = (data, groupByField) => {
@@ -267,7 +291,7 @@ export default function LaporanPekerjaan() {
     
     const groups = {};
     data.forEach(item => {
-      let key = item[groupByField] || 'Tidak Diketahui';
+      const key = item.id_kategori_sparepart || 'Tidak Diketahui';
       if (!groups[key]) groups[key] = [];
       groups[key].push(item);
     });
@@ -282,9 +306,44 @@ export default function LaporanPekerjaan() {
   const groupedRepairs = groupData(filteredRepairs, groupBy);
   const groupedArchive = groupData(filteredArchive, groupBy);
 
-  return (
+   return (
     <>
-    {page === 'dashboard' && (
+      <nav className="bg-slate-900/95 border-b border-slate-800 shadow-sm sticky top-0 z-40 backdrop-blur-sm">
+        <div className="w-[80vw] max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <Wrench size={16} className="text-white" />
+              </div>
+              <span className="text-sm font-bold text-white tracking-wide">HVE SPIL</span>
+            </div>
+            <div className="flex items-center gap-1 bg-slate-800/50 rounded-full p-1">
+              <button onClick={() => setPage('dashboard')} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${page === 'dashboard' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'}`}>
+                <Home size={14} className="inline mr-1" />
+                Dashboard
+              </button>
+              <button onClick={() => { setView('active'); setPage('perbaikan'); setGroupBy('none'); }} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${page === 'perbaikan' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'}`}>
+                <Wrench size={14} className="inline mr-1" />
+                Perbaikan
+              </button>
+              <button onClick={() => setPage('stok')} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${page === 'stok' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'}`}>
+                <Package size={14} className="inline mr-1" />
+                Suku Cadang
+              </button>
+              <button onClick={() => setPage('terkirim')} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${page === 'terkirim' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'}`}>
+                <Truck size={14} className="inline mr-1" />
+                Terkirim
+              </button>
+              <button onClick={() => setPage('dinamoready')} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${page === 'dinamoready' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'}`}>
+                <Package size={14} className="inline mr-1" />
+                Dinamo Ready
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {page === 'dashboard' && (
       <DashboardPage
         activeRepairs={repairs}
         archiveRepairs={archive}
@@ -293,6 +352,9 @@ export default function LaporanPekerjaan() {
         onNavigateStock={navigateToStock}
         onNavigateArchive={navigateToArchive}
         onNavigateTerkirim={navigateToTerkirim}
+        onNavigateRepairWithCategory={navigateToRepairWithCategory}
+        onNavigateDinamoReady={navigateToDinamoReady}
+        dinamoReadyCount={dinamoReadyCount}
       />
     )}
     {page === 'perbaikan' && (
@@ -318,7 +380,7 @@ export default function LaporanPekerjaan() {
               </button>
               <button onClick={() => setShowRepairForm(true)} className="inline-flex h-10 items-center justify-center rounded-full bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950 shadow-md shadow-emerald-500/20 hover:bg-emerald-400">
                 <Plus size={16} />
-                Perbaikan Baru
+                Perbaikan
               </button>
             </div>
           </div>
@@ -360,9 +422,9 @@ export default function LaporanPekerjaan() {
             </select>
             <select className="w-full rounded-3xl border border-slate-800 bg-slate-950/80 p-3 text-slate-100" value={groupBy} onChange={e => setGroupBy(e.target.value)}>
               <option value="none">Tidak Dikelompokkan</option>
-              <option value="id_perbaikan">Kelompokkan: ID Tiket</option>
-              <option value="id_kategori_sparepart">Kelompokkan: Kategori</option>
-              <option value="lokasiOperasi">Kelompokkan: Lokasi</option>
+              {categories.map(cat => (
+                <option key={cat.nama_kategori} value={cat.nama_kategori}>{cat.nama_kategori}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -432,16 +494,17 @@ export default function LaporanPekerjaan() {
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-800">
                 <thead className="bg-slate-950/90 text-slate-400">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">ID Tiket</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Unit</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Mesin</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Kategori</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Lokasi</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Tanggal Masuk</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase">Tanggal Keluar</th>
-                  </tr>
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase">ID Tiket</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase">Unit</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase">Mesin</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase">Kategori</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase">Lokasi</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase">Tanggal Masuk</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase">Tanggal Keluar</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase">Aksi</th>
+                    </tr>
                 </thead>
                 <tbody className="bg-slate-950 divide-y divide-slate-800">
                   {groupedArchive.map(group => (
@@ -459,7 +522,7 @@ export default function LaporanPekerjaan() {
                         const StatusIcon = statusConfig[repair.status_perbaikan]?.icon || CheckCircle;
                         const statusColor = statusConfig[repair.status_perbaikan]?.color || "text-slate-300";
                         return (
-                          <tr key={repair.id_perbaikan} className="hover:bg-slate-900/80">
+                          <tr key={repair.id_perbaikan} className="hover:bg-slate-900/80 cursor-pointer" onClick={() => handleCardClick(repair)}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{repair.id_perbaikan}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{repair.nama_unit || "-"}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{mesinData?.nama_mesin || repair.id_mesin || "-"}</td>
@@ -468,6 +531,7 @@ export default function LaporanPekerjaan() {
                             <td className="px-6 py-4 whitespace-nowrap"><span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${statusColor} bg-slate-800`}>{<StatusIcon size={12} />} {repair.status_perbaikan}</span></td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{repair.tgl_masuk ? new Date(repair.tgl_masuk).toLocaleDateString("id-ID") : "-"}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{repair.tgl_keluar ? new Date(repair.tgl_keluar).toLocaleDateString("id-ID") : "-"}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-emerald-400">Edit</td>
                           </tr>
                         );
                       })}
@@ -734,6 +798,10 @@ export default function LaporanPekerjaan() {
 
     {page === 'terkirim' && (
       <TerkirimPage onBack={() => setPage('dashboard')} />
+    )}
+
+    {page === 'dinamoready' && (
+      <DinamoReadyPage onBack={() => setPage('dashboard')} />
     )}
 
     {page !== 'dashboard' && (

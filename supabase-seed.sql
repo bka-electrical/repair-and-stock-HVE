@@ -36,6 +36,19 @@ INSERT INTO public.tb_perbaikan (id_perbaikan, nama_unit, id_mesin, id_kategori_
   ('RD-0001', 'Excavator 01', 'MES-001', 'Radiator', 'Lapangan', '2024-01-17', 'Selesai', 'Selesai radiator')
 ON CONFLICT (id_perbaikan) DO NOTHING;
 
+-- 6. Sample data dinamo ready (jika tabel tb_dinamo_ready masih kosong)
+INSERT INTO public.tb_dinamo_ready (id_dinamo_ready, tipe_dinamo, id_mesin, kondisi, keterangan) VALUES
+  ('DRD-001', 'Dinamo Starter', 'MES-001', 'Bagus / Utuh', 'Siap pasang langsung'),
+  ('DRD-002', 'Dinamo Amper (Alternator)', 'MES-002', 'Terkanibal Sebagian', 'Stator masih bagus'),
+  ('DRD-003', 'Dinamo Starter', 'MES-003', 'Habis / Afkir', 'Sudah habis dikanibal')
+ON CONFLICT (id_dinamo_ready) DO NOTHING;
+
+-- 7. Sample data riwayat kanibal (jika tabel tb_riwayat_kanibal masih kosong)
+INSERT INTO public.tb_riwayat_kanibal (id_kanibal, id_dinamo_ready, id_perbaikan, id_komponen, tanggal_kanibal, keterangan) VALUES
+  ('KAN-001', 'DRD-002', 'DA-0001', 'KOM-001', '2024-01-15', 'Copot rotor dari DRD-002 untuk DA-0001'),
+  ('KAN-002', 'DRD-003', 'DS-0001', 'KOM-003', '2024-01-16', 'Ambil angker dari DRD-003 untuk DS-0001')
+ON CONFLICT (id_kanibal) DO NOTHING;
+
 -- Cek data yang sudah ada:
 -- SELECT * FROM tb_kategori_sparepart;
 -- SELECT * FROM tb_lokasi;

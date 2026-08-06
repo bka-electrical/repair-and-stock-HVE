@@ -8,14 +8,42 @@ import { getCorsHeaders, sanitizeError } from "./_lib/helpers.js";
 const supabase = getSupabase();
 
 async function generateStokId(prefix) {
-  const unique = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  return `${prefix}-${unique}`.slice(0, 20);
+  const table = prefix === "STE" ? "tb_stok_elektrik" : "tb_stok_din_rad";
+  const idCol = prefix === "STE" ? "id_stok_elektrik" : "id_stok_din_rad";
+  const { data, error } = await supabase
+    .from(table)
+    .select(idCol)
+    .like(idCol, `${prefix}-%`);
+  if (error) throw error;
+
+  let maxSeq = 0;
+  (data || []).forEach((row) => {
+    const val = row[idCol];
+    const parts = String(val).split("-");
+    const num = parseInt(parts[1], 10);
+    if (!isNaN(num) && num > maxSeq) maxSeq = num;
+  });
+
+  return `${prefix}-${String(maxSeq + 1).padStart(3, "0")}`;
 }
 
 async function generateRiwayatId(isElektrik) {
+  const table = isElektrik ? "tb_riwayat_elektrik" : "tb_riwayat_din_rad";
   const prefix = isElektrik ? "RSTE" : "RSDR";
-  const unique = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  return `${prefix}-${unique}`.slice(0, 20);
+  const { data, error } = await supabase
+    .from(table)
+    .select("id_riwayat")
+    .like("id_riwayat", `${prefix}-%`);
+  if (error) throw error;
+
+  let maxSeq = 0;
+  (data || []).forEach((row) => {
+    const parts = String(row.id_riwayat).split("-");
+    const num = parseInt(parts[1], 10);
+    if (!isNaN(num) && num > maxSeq) maxSeq = num;
+  });
+
+  return `${prefix}-${String(maxSeq + 1).padStart(3, "0")}`;
 }
 
 export default async function handler(req, res) {
