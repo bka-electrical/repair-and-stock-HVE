@@ -175,14 +175,14 @@ export const repairsAPI = {
     return parseJsonSafe(res);
   },
 
-  getDinamoReady: async () => {
-    const res = await fetch(`${REPAIRS_URL}?action=getDinamoReady`);
+  getProdukReady: async () => {
+    const res = await fetch(`${REPAIRS_URL}?action=getProdukReady`);
     const json = await parseJsonSafe(res);
     return json.data || [];
   },
 
-  addDinamoReady: async (data) => {
-    const res = await fetch(`${REPAIRS_URL}?action=addDinamoReady`, {
+  addProdukReady: async (data) => {
+    const res = await fetch(`${REPAIRS_URL}?action=addProdukReady`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -190,8 +190,8 @@ export const repairsAPI = {
     return parseJsonSafe(res);
   },
 
-  updateDinamoReady: async (data) => {
-    const res = await fetch(`${REPAIRS_URL}?action=updateDinamoReady`, {
+  updateProdukReady: async (data) => {
+    const res = await fetch(`${REPAIRS_URL}?action=updateProdukReady`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -199,23 +199,26 @@ export const repairsAPI = {
     return parseJsonSafe(res);
   },
 
-  deleteDinamoReady: async (id) => {
-    const res = await fetch(`${REPAIRS_URL}?action=deleteDinamoReady`, {
+  deleteProdukReady: async (id) => {
+    const res = await fetch(`${REPAIRS_URL}?action=deleteProdukReady`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id_dinamo_ready: id }),
+      body: JSON.stringify({ id_produk_ready: id }),
     });
     return parseJsonSafe(res);
   },
 
-  getRiwayatKanibal: async () => {
-    const res = await fetch(`${REPAIRS_URL}?action=getRiwayatKanibal`);
+  getRiwayatProduk: async (idProdukReady) => {
+    const qs = idProdukReady
+      ? `&id_produk_ready=${encodeURIComponent(idProdukReady)}`
+      : "";
+    const res = await fetch(`${REPAIRS_URL}?action=getRiwayatProduk${qs}`);
     const json = await parseJsonSafe(res);
     return json.data || [];
   },
 
-  addRiwayatKanibal: async (data) => {
-    const res = await fetch(`${REPAIRS_URL}?action=addRiwayatKanibal`, {
+  addRiwayatProduk: async (data) => {
+    const res = await fetch(`${REPAIRS_URL}?action=addRiwayatProduk`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -223,8 +226,8 @@ export const repairsAPI = {
     return parseJsonSafe(res);
   },
 
-  updateRiwayatKanibal: async (data) => {
-    const res = await fetch(`${REPAIRS_URL}?action=updateRiwayatKanibal`, {
+  updateRiwayatProduk: async (data) => {
+    const res = await fetch(`${REPAIRS_URL}?action=updateRiwayatProduk`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -232,11 +235,11 @@ export const repairsAPI = {
     return parseJsonSafe(res);
   },
 
-  deleteRiwayatKanibal: async (id) => {
-    const res = await fetch(`${REPAIRS_URL}?action=deleteRiwayatKanibal`, {
+  deleteRiwayatProduk: async (id) => {
+    const res = await fetch(`${REPAIRS_URL}?action=deleteRiwayatProduk`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id_kanibal: id }),
+      body: JSON.stringify({ id_riwayat_produk: id }),
     });
     return parseJsonSafe(res);
   },

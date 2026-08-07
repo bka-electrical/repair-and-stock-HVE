@@ -28,8 +28,8 @@ export default function DashboardPage({
   onNavigateArchive,
   onNavigateTerkirim,
   onNavigateRepairWithCategory,
-  onNavigateDinamoReady,
-  dinamoReadyCount,
+  onNavigateProdukReady,
+  produkReadyCount,
 }) {
   const [selectedTask, setSelectedTask] = useState(null);
   const [locale, setLocale] = useState('id');
@@ -53,8 +53,8 @@ export default function DashboardPage({
        doneSubtitle: 'Lihat riwayat perbaikan yang telah selesai.',
        sent: 'Terkirim',
        sentSubtitle: 'Lihat halaman surat jalan yang terkirim.',
-       dinamoReady: 'Dinamo Ready',
-       dinamoReadySubtitle: 'Kelola dinamo siap pasang.',
+       produkReady: 'Produk Ready',
+       produkReadySubtitle: 'Kelola produk siap pasang.',
       summaryLabel: 'Ringkasan Suku Cadang',
       summaryHeading: 'Stok Penting',
       outOfStock: 'Habis',
@@ -189,12 +189,12 @@ export default function DashboardPage({
               <p className="mt-2 text-sm text-slate-300">{t.sentSubtitle}</p>
             </button>
 
-            <button onClick={onNavigateDinamoReady} className="group rounded-3xl border border-slate-800 bg-gradient-to-br from-amber-600 to-orange-600 p-6 text-left shadow-xl transition hover:-translate-y-1 hover:shadow-2xl">
+            <button onClick={onNavigateProdukReady} className="group rounded-3xl border border-slate-800 bg-gradient-to-br from-amber-600 to-orange-600 p-6 text-left shadow-xl transition hover:-translate-y-1 hover:shadow-2xl">
               <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 text-white shadow-sm">
                 <Hammer size={28} />
               </div>
-              <p className="text-lg font-semibold text-white">{t.dinamoReady}</p>
-              <p className="mt-2 text-sm text-slate-300">{t.dinamoReadySubtitle}</p>
+              <p className="text-lg font-semibold text-white">{t.produkReady}</p>
+              <p className="mt-2 text-sm text-slate-300">{t.produkReadySubtitle}</p>
             </button>
           </div>
         </section>
@@ -288,12 +288,12 @@ export default function DashboardPage({
                  </div>
                </button>
 
-               <button onClick={onNavigateDinamoReady} className="rounded-3xl border border-slate-800 bg-slate-900/90 p-5 text-left shadow-sm transition hover:border-amber-400 h-full flex flex-col justify-between">
+               <button onClick={onNavigateProdukReady} className="rounded-3xl border border-slate-800 bg-slate-900/90 p-5 text-left shadow-sm transition hover:border-amber-400 h-full flex flex-col justify-between">
                  <div className="flex items-start justify-between gap-3">
                    <div>
-                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">{t.dinamoReady}</p>
-                     <p className="mt-2 text-3xl font-bold text-white">{dinamoReadyCount}</p>
-                     <p className="mt-2 text-sm text-slate-400">{t.dinamoReadySubtitle}</p>
+                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">{t.produkReady}</p>
+                     <p className="mt-2 text-3xl font-bold text-white">{produkReadyCount}</p>
+                     <p className="mt-2 text-sm text-slate-400">{t.produkReadySubtitle}</p>
                    </div>
                    <div className="rounded-2xl bg-slate-800 p-3 text-amber-400">
                      <Hammer size={20} />

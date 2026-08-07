@@ -4,7 +4,7 @@ import { repairsAPI } from "./api";
 import StokPage from "./pages/StokPage";
 import DashboardPage from "./pages/DashboardPage";
 import TerkirimPage from "./pages/TerkirimPage";
-import DinamoReadyPage from "./pages/DinamoReadyPage";
+import ProdukReadyPage from "./pages/ProdukReadyPage";
 
 export default function LaporanPekerjaan() {
   const [repairs, setRepairs] = useState([]);
@@ -24,9 +24,9 @@ export default function LaporanPekerjaan() {
   const [komponenLoading, setKomponenLoading] = useState(false);
   const [komponenStock, setKomponenStock] = useState({});
   const [stockSummary, setStockSummary] = useState({ outOfStock: 0, lowStock: 0 });
-  const [dinamoReadyCount, setDinamoReadyCount] = useState(0);
+  const [produkReadyCount, setProdukReadyCount] = useState(0);
   const komponenLoadIdRef = useRef(0);
-  const [page, setPage] = useState('dashboard'); // 'dashboard' | 'perbaikan' | 'stok' | 'terkirim' | 'dinamoready'
+  const [page, setPage] = useState('dashboard'); // 'dashboard' | 'perbaikan' | 'stok' | 'terkirim' | 'produkready'
   const [repairFormData, setRepairFormData] = useState({
     nama_unit: "",
     id_mesin: "",
@@ -45,7 +45,7 @@ export default function LaporanPekerjaan() {
     loadQueue();
     loadMasterData();
     loadStockSummary();
-    loadDinamoReadyCount();
+    loadProdukReadyCount();
     loadArchive();
   }, []);
 
@@ -68,11 +68,11 @@ export default function LaporanPekerjaan() {
     } catch (e) { console.error('Stock summary fail', e); }
   };
 
-  const loadDinamoReadyCount = async () => {
+  const loadProdukReadyCount = async () => {
     try {
-      const data = await repairsAPI.getDinamoReady();
-      setDinamoReadyCount(Array.isArray(data) ? data.length : 0);
-    } catch (e) { console.error('Dinamo Ready count fail', e); }
+      const data = await repairsAPI.getProdukReady();
+      setProdukReadyCount(Array.isArray(data) ? data.length : 0);
+    } catch (e) { console.error('Produk Ready count fail', e); }
   };
 
   const loadMasterData = async () => {
@@ -123,8 +123,8 @@ export default function LaporanPekerjaan() {
     setPage('perbaikan');
   };
 
-  const navigateToDinamoReady = () => {
-    setPage('dinamoready');
+  const navigateToProdukReady = () => {
+    setPage('produkready');
   };
 
   const navigateToTerkirim = () => {
@@ -334,9 +334,9 @@ export default function LaporanPekerjaan() {
                 <Truck size={14} className="inline mr-1" />
                 Terkirim
               </button>
-              <button onClick={() => setPage('dinamoready')} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${page === 'dinamoready' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'}`}>
+              <button onClick={() => setPage('produkready')} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${page === 'produkready' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'}`}>
                 <Package size={14} className="inline mr-1" />
-                Dinamo Ready
+                Produk Ready
               </button>
             </div>
           </div>
@@ -353,8 +353,8 @@ export default function LaporanPekerjaan() {
         onNavigateArchive={navigateToArchive}
         onNavigateTerkirim={navigateToTerkirim}
         onNavigateRepairWithCategory={navigateToRepairWithCategory}
-        onNavigateDinamoReady={navigateToDinamoReady}
-        dinamoReadyCount={dinamoReadyCount}
+        onNavigateProdukReady={navigateToProdukReady}
+        produkReadyCount={produkReadyCount}
       />
     )}
     {page === 'perbaikan' && (
@@ -800,8 +800,8 @@ export default function LaporanPekerjaan() {
       <TerkirimPage onBack={() => setPage('dashboard')} />
     )}
 
-    {page === 'dinamoready' && (
-      <DinamoReadyPage onBack={() => setPage('dashboard')} />
+    {page === 'produkready' && (
+      <ProdukReadyPage onBack={() => setPage('dashboard')} />
     )}
 
     {page !== 'dashboard' && (
