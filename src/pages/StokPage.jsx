@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, X, Search, Package, ArrowLeft, RefreshCw } from "lucide-react";
+import { Plus, X, Search, Package, ArrowLeft, RefreshCw, Loader2 } from "lucide-react";
 import { repairsAPI } from "../api";
 
 export default function StokPage({ onBack }) {
@@ -16,6 +16,8 @@ export default function StokPage({ onBack }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const [riwayat, setRiwayat] = useState([]);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
+  const [isSubmittingStok, setIsSubmittingStok] = useState(false);
+  const [isSubmittingTransaksi, setIsSubmittingTransaksi] = useState(false);
   const [transaksiForm, setTransaksiForm] = useState({
     jenis_transaksi: 'Masuk',
     jumlah: '',
@@ -56,6 +58,7 @@ export default function StokPage({ onBack }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmittingStok(true);
     try {
       if (activeTab === 'elektrik') {
         await repairsAPI.addStokElektrik(formData);
@@ -73,7 +76,11 @@ export default function StokPage({ onBack }) {
         nama_spesifikasi_barang: '',
         posisi_rak: ''
       });
-    } catch (e) { alert("Gagal menyimpan stok"); }
+    } catch (e) {
+      alert("Gagal menyimpan stok");
+    } finally {
+      setIsSubmittingStok(false);
+    }
   };
 
   const handleRowClick = async (item) => {
@@ -105,25 +112,22 @@ export default function StokPage({ onBack }) {
       return;
     }
 
-    const payload = {
-      tipe: activeTab === 'elektrik' ? 'elektrik' : 'dinrad',
-      id_stok: String(idStok),
-      jenis_transaksi: transaksiForm.jenis_transaksi,
-      jumlah: parseInt(transaksiForm.jumlah) || 0,
-      tgl_transaksi: transaksiForm.tgl_transaksi,
-      keterangan: transaksiForm.keterangan
-    };
-
-    console.log('Kirim transaksi:', payload);
-
+    setIsSubmittingTransaksi(true);
     try {
+      const payload = {
+        tipe: activeTab === 'elektrik' ? 'elektrik' : 'dinrad',
+        id_stok: String(idStok),
+        jenis_transaksi: transaksiForm.jenis_transaksi,
+        jumlah: parseInt(transaksiForm.jumlah) || 0,
+        tgl_transaksi: transaksiForm.tgl_transaksi,
+        keterangan: transaksiForm.keterangan
+      };
+
       const res = await repairsAPI.addRiwayat(payload);
-      console.log('Response addRiwayat:', res);
 
       const riwayatData = activeTab === 'elektrik'
         ? await repairsAPI.getRiwayatElektrik(selectedItem.id_stok_elektrik)
         : await repairsAPI.getRiwayatDinRad(selectedItem.id_stok_din_rad);
-      console.log('Riwayat reload:', riwayatData);
       setRiwayat(Array.isArray(riwayatData) ? riwayatData : []);
       await loadData();
 
@@ -137,6 +141,8 @@ export default function StokPage({ onBack }) {
     } catch (e) {
       console.error('Gagal menambah transaksi:', e);
       alert('Gagal menambah transaksi. Cek console untuk detail.');
+    } finally {
+      setIsSubmittingTransaksi(false);
     }
   };
 
@@ -364,7 +370,10 @@ export default function StokPage({ onBack }) {
               )}
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800">Batal</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">Simpan</button>
+                <button type="submit" disabled={isSubmittingStok} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  {isSubmittingStok && <Loader2 size={16} className="animate-spin" />}
+                  Simpan
+                </button>
               </div>
             </form>
           </div>
@@ -408,7 +417,10 @@ export default function StokPage({ onBack }) {
                   </div>
                   <div className="flex gap-3 pt-4">
                     <button type="button" onClick={() => setShowAddTransaction(false)} className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800">Batal</button>
-                    <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">Simpan</button>
+                    <button type="submit" disabled={isSubmittingTransaksi} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                      {isSubmittingTransaksi && <Loader2 size={16} className="animate-spin" />}
+                      Simpan
+                    </button>
                   </div>
                 </form>
               </div>

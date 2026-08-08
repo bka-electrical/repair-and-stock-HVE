@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Plus, X, Edit, Trash2, Package, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { ArrowLeft, Plus, X, Edit, Trash2, Package, ArrowDownCircle, ArrowUpCircle, Loader2 } from "lucide-react";
 import { repairsAPI } from "../api";
 
 export default function ProdukReadyPage({ onBack }) {
@@ -8,7 +8,7 @@ export default function ProdukReadyPage({ onBack }) {
   const [riwayat, setRiwayat] = useState([]);
   const [kategoriList, setKategoriList] = useState([]);
   const [mesinList, setMesinList] = useState([]);
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({
@@ -57,6 +57,7 @@ export default function ProdukReadyPage({ onBack }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       const payload = {
         ...formData,
@@ -74,7 +75,11 @@ export default function ProdukReadyPage({ onBack }) {
       setShowForm(false);
       setEditingItem(null);
       setFormData({ kategori_produk: "", id_mesin: "", jumlah_stok: "", keterangan: "" });
-    } catch (e) { alert("Gagal menyimpan data produk ready"); }
+    } catch (e) {
+      alert("Gagal menyimpan data produk ready");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEdit = (item) => {
@@ -109,6 +114,7 @@ export default function ProdukReadyPage({ onBack }) {
 
   const handleTransaksiSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       await repairsAPI.addRiwayatProduk({
         id_produk_ready: transaksiTarget.id_produk_ready,
@@ -124,6 +130,8 @@ export default function ProdukReadyPage({ onBack }) {
     } catch (err) {
       console.error(err);
       alert("Gagal mencatat transaksi stok");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -311,7 +319,10 @@ export default function ProdukReadyPage({ onBack }) {
               </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); }} className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800">Batal</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">{editingItem ? "Update" : "Simpan"}</button>
+                <button type="submit" disabled={isSubmitting} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                  {editingItem ? "Update" : "Simpan"}
+                </button>
               </div>
             </form>
           </div>
@@ -350,7 +361,10 @@ export default function ProdukReadyPage({ onBack }) {
               </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => { setShowTransaksiForm(false); setTransaksiTarget(null); }} className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800">Batal</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">Simpan Transaksi</button>
+                <button type="submit" disabled={isSubmitting} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                {editingItem ? "Update" : "Simpan"}
+              </button>
               </div>
             </form>
           </div>

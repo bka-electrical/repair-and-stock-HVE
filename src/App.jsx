@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Plus, X, RefreshCw, Wrench, Package, CheckCircle, Search, ArrowLeft, LayoutGrid, Home, Settings, Truck } from "lucide-react";
+import { Plus, X, RefreshCw, Wrench, Package, CheckCircle, Search, ArrowLeft, LayoutGrid, Home, Settings, Truck, Loader2 } from "lucide-react";
 import { repairsAPI } from "./api";
 import StokPage from "./pages/StokPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -26,6 +26,8 @@ export default function LaporanPekerjaan() {
   const [stockSummary, setStockSummary] = useState({ outOfStock: 0, lowStock: 0 });
   const [produkReadyCount, setProdukReadyCount] = useState(0);
   const komponenLoadIdRef = useRef(0);
+  const [isCreatingTicket, setIsCreatingTicket] = useState(false);
+  const [isUpdatingTicket, setIsUpdatingTicket] = useState(false);
   const [page, setPage] = useState('dashboard'); // 'dashboard' | 'perbaikan' | 'stok' | 'terkirim' | 'produkready'
   const [repairFormData, setRepairFormData] = useState({
     nama_unit: "",
@@ -133,6 +135,7 @@ export default function LaporanPekerjaan() {
 
   const handleCreateTicket = async (e) => {
     e.preventDefault();
+    setIsCreatingTicket(true);
     try {
       const komponenWithJumlah = selectedKomponen.map(s => ({
         id_komponen: s.id_komponen,
@@ -159,12 +162,16 @@ export default function LaporanPekerjaan() {
         catatan: "",
         tgl_masuk: new Date().toISOString().split("T")[0],
         tgl_keluar: "",
-        riwayat_no_kabel: "",   // <- baru
-        riwayat_sisa: ""       // <- baru
+        riwayat_no_kabel: "",
+        riwayat_sisa: ""
       });
       setSelectedKomponen([]);
       setKomponenList([]);
-    } catch (error) { alert("Gagal membuat tiket"); }
+    } catch (error) {
+      alert("Gagal membuat tiket");
+    } finally {
+      setIsCreatingTicket(false);
+    }
   };
 
   const handleKategoriChange = async (e) => {
@@ -197,6 +204,7 @@ export default function LaporanPekerjaan() {
   };
 
   const handleUpdateTicket = async () => {
+    setIsUpdatingTicket(true);
     try {
       const komponenWithJumlah = (selectedRepair.selectedKomponen || []).map(s => ({
         id_komponen: typeof s === 'object' ? s.id_komponen : s,
@@ -213,7 +221,7 @@ export default function LaporanPekerjaan() {
         id_mesin: selectedRepair.id_mesin || ''
       };
       await repairsAPI.update(payload);
-      
+
       if (selectedRepair.status_perbaikan === 'Selesai' || selectedRepair.status_perbaikan === 'Afkir') {
         setRepairs(prev => prev.filter(r => r.id_perbaikan !== selectedRepair.id_perbaikan));
         setArchive(prev => [{
@@ -230,10 +238,14 @@ export default function LaporanPekerjaan() {
           tgl_keluar: payload.tgl_keluar
         } : r));
       }
-      
+
       setSelectedRepair(null);
       setKomponenList([]);
-    } catch (error) { alert("Gagal update tiket"); }
+    } catch (error) {
+      alert("Gagal update tiket");
+    } finally {
+      setIsUpdatingTicket(false);
+    }
   };
 
   const handleCardClick = async (repair) => {
@@ -658,7 +670,8 @@ export default function LaporanPekerjaan() {
               <button onClick={() => setSelectedRepair(null)} className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800">
                 Batal
               </button>
-              <button onClick={handleUpdateTicket} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+              <button onClick={handleUpdateTicket} disabled={isUpdatingTicket} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                {isUpdatingTicket && <Loader2 size={16} className="animate-spin" />}
                 Simpan Perubahan
               </button>
             </div>
@@ -782,7 +795,8 @@ export default function LaporanPekerjaan() {
                     <button type="button" onClick={() => { setShowRepairForm(false); setSelectedKomponen([]); setKomponenList([]); }} className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800">
                       Batal
                     </button>
-                    <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+                    <button type="submit" disabled={isCreatingTicket} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                      {isCreatingTicket && <Loader2 size={16} className="animate-spin" />}
                       Buat Tiket
                     </button>
                   </div>

@@ -5,9 +5,28 @@ import { handleStockNotification } from "./_lib/notify.js";
 
 // Pakai SERVICE_ROLE_KEY (bukan anon key) karena ini jalan di server/backend,
 // butuh akses penuh tanpa dibatasi RLS. Jangan pernah expose service role key ke frontend.
+async function fetchWithRetry(url, options, retries = 4, delayMs = 500) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fetch(url, options);
+    } catch (err) {
+      const isNetworkError =
+        err?.cause?.code === "ECONNRESET" ||
+        /fetch failed/i.test(err?.message || "");
+      if (!isNetworkError || attempt === retries) throw err;
+      await new Promise((resolve) => setTimeout(resolve, delayMs * (attempt + 1)));
+    }
+  }
+}
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  {
+    global: {
+      fetch: (url, options) => fetchWithRetry(url, options),
+    },
+  }
 );
 
 const CATEGORY_PREFIX = {
@@ -228,19 +247,9 @@ async function deductDinRadStock(idKomponen, jumlah, idMesin) {
 async function processKomponen(idPerbaikan, komponenList, idKategoriSparepart, idMesin) {
   if (!Array.isArray(komponenList)) return;
 
-  const { data: kategoriRows, error: kategoriErr } = await supabase
-    .from("tb_kategori_sparepart")
-    .select("tipe_stok")
-    .eq("nama_kategori", idKategoriSparepart)
-    .limit(1);
-
-  if (kategoriErr) {
-    console.error("processKomponen: gagal ambil tipe_stok ->", kategoriErr.message);
-  }
-
-  const tipeStok = kategoriRows && kategoriRows.length > 0 ? kategoriRows[0].tipe_stok : null;
-  const isElektrik = tipeStok === "elektrik";
-  const isDinRad = tipeStok === "din_rad";
+  const kategoriLower = String(idKategoriSparepart || "").toLowerCase().trim();
+  const isElektrik = kategoriLower.includes("elektrik");
+  const isDinRad = kategoriLower.includes("dinamo") || kategoriLower.includes("radiator");
 
   for (const comp of komponenList) {
     const jumlah = parseInt(comp.jumlah) || 1;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import { ArrowLeft, Truck, Plus, X, Loader2 } from "lucide-react";
 import { repairsAPI } from "../api";
 
 export default function TerkirimPage({ onBack }) {
@@ -8,6 +8,7 @@ export default function TerkirimPage({ onBack }) {
   const [mesinList, setMesinList] = useState([]); // tb_mesin
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     no_surat_jalan: "",
     tanggal_kirim: new Date().toISOString().split("T")[0],
@@ -81,36 +82,34 @@ export default function TerkirimPage({ onBack }) {
     setShowForm(true);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const payload = {
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsSubmitting(true);
+  try {
+    if (editingItem) {
+      await repairsAPI.updateSuratJalan({
+        id_surat_jalan: editingItem.id_surat_jalan,
         ...formData,
-        jumlah: parseInt(formData.jumlah) || 1,
-      };
-      if (editingItem) {
-        await repairsAPI.updateSuratJalan({
-          id_surat_jalan: editingItem.id_surat_jalan,
-          ...payload,
-        });
-      } else {
-        await repairsAPI.addSuratJalan(payload);
-      }
-      await loadSuratJalan();
-      setShowForm(false);
-      setEditingItem(null);
-      setFormData({
-        no_surat_jalan: "",
-        tanggal_kirim: new Date().toISOString().split("T")[0],
-        tujuan: "",
-        kategori_barang: "",
-        id_mesin: "",
-        jumlah: "1",
       });
-    } catch (e) {
-      alert(editingItem ? "Gagal update surat jalan" : "Gagal menyimpan surat jalan");
+    } else {
+      await repairsAPI.addSuratJalan(formData);
     }
-  };
+    await loadSuratJalan();
+    setShowForm(false);
+    setEditingItem(null);
+    setFormData({
+      no_surat_jalan: "",
+      tanggal_kirim: new Date().toISOString().split("T")[0],
+      tujuan: "",
+      kategori_barang: "",
+      id_mesin: "",
+    });
+  } catch (e) {
+    alert(editingItem ? "Gagal update surat jalan" : "Gagal menyimpan surat jalan");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -243,7 +242,10 @@ export default function TerkirimPage({ onBack }) {
               </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); }} className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800">Batal</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">{editingItem ? "Update" : "Simpan"}</button>
+                <button type="submit" disabled={isSubmitting} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                  {editingItem ? "Update" : "Simpan"}
+                </button>
               </div>
             </form>
           </div>
