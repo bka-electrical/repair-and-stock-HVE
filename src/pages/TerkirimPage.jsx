@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Truck, Plus, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Truck, Plus, X, Loader2, Trash2 } from "lucide-react";
 import { repairsAPI } from "../api";
 
-export default function TerkirimPage({ onBack }) {
+export default function TerkirimPage({ onBack, isLoggedIn }) {
   const [suratList, setSuratList] = useState([]);
   const [kategoriList, setKategoriList] = useState([]); // tb_kategori_sparepart
   const [mesinList, setMesinList] = useState([]); // tb_mesin
@@ -111,6 +111,15 @@ const handleSubmit = async (e) => {
   }
 };
 
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Hapus surat jalan ini?")) return;
+    try {
+      await repairsAPI.deleteSuratJalan(id);
+      await loadSuratJalan();
+    } catch (e) { alert("Gagal menghapus data"); }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur-sm">
@@ -164,8 +173,9 @@ const handleSubmit = async (e) => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{getKategoriLabel(item.kategori_barang)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{getMesinLabel(item.id_mesin)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.jumlah ?? "-"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <span className="text-sm font-medium text-emerald-400 hover:text-emerald-300">Edit</span>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex items-center justify-end gap-2">
+                        <span onClick={(e) => { e.stopPropagation(); openEdit(item); }} className="text-sm font-medium text-emerald-400 hover:text-emerald-300 cursor-pointer">Edit</span>
+                        {isLoggedIn && <button onClick={(e) => { e.stopPropagation(); handleDelete(item.id_surat_jalan); }} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>}
                       </td>
                     </tr>
                   ))

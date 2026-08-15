@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Plus, X, Search, Package, ArrowLeft, RefreshCw, Loader2 } from "lucide-react";
+import { Plus, X, Search, Package, ArrowLeft, RefreshCw, Loader2, Edit, Trash2 } from "lucide-react";
 import { repairsAPI } from "../api";
 
-export default function StokPage({ onBack }) {
+export default function StokPage({ onBack, isLoggedIn }) {
   const [activeTab, setActiveTab] = useState('elektrik');
   const [stokElektrik, setStokElektrik] = useState([]);
   const [stokDinRad, setStokDinRad] = useState([]);
@@ -16,6 +16,7 @@ export default function StokPage({ onBack }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const [riwayat, setRiwayat] = useState([]);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [isSubmittingStok, setIsSubmittingStok] = useState(false);
   const [isSubmittingTransaksi, setIsSubmittingTransaksi] = useState(false);
   const [transaksiForm, setTransaksiForm] = useState({
@@ -60,13 +61,28 @@ export default function StokPage({ onBack }) {
     e.preventDefault();
     setIsSubmittingStok(true);
     try {
-      if (activeTab === 'elektrik') {
-        await repairsAPI.addStokElektrik(formData);
+      if (editingItem) {
+        if (activeTab === 'elektrik') {
+          await repairsAPI.updateStokElektrik({
+            id_stok_elektrik: editingItem.id_stok_elektrik,
+            ...formData,
+          });
+        } else {
+          await repairsAPI.updateStokDinRad({
+            id_stok_din_rad: editingItem.id_stok_din_rad,
+            ...formData,
+          });
+        }
       } else {
-        await repairsAPI.addStokDinRad(formData);
+        if (activeTab === 'elektrik') {
+          await repairsAPI.addStokElektrik(formData);
+        } else {
+          await repairsAPI.addStokDinRad(formData);
+        }
       }
       await loadData();
       setShowModal(false);
+      setEditingItem(null);
       setFormData({
         id_komponen: '',
         nama_komponen: '',
@@ -77,7 +93,7 @@ export default function StokPage({ onBack }) {
         posisi_rak: ''
       });
     } catch (e) {
-      alert("Gagal menyimpan stok");
+      alert(editingItem ? "Gagal update stok" : "Gagal menyimpan stok");
     } finally {
       setIsSubmittingStok(false);
     }
@@ -144,6 +160,29 @@ export default function StokPage({ onBack }) {
     } finally {
       setIsSubmittingTransaksi(false);
     }
+  };
+
+  const handleEdit = (item) => {
+    setEditingItem(item);
+    setFormData({
+      id_komponen: item.id_komponen || '',
+      nama_komponen: item.nama_komponen || '',
+      stok_saat_ini: item.stok_saat_ini || '',
+      batas_minimal: item.batas_minimal || '',
+      kompatibilitas_unit: item.kompatibilitas_unit || '',
+      nama_spesifikasi_barang: item.nama_spesifikasi_barang || '',
+      posisi_rak: item.posisi_rak || ''
+    });
+    setShowModal(true);
+  };
+
+  const handleDelete = async (item) => {
+    if (!window.confirm('Hapus data stok ini?')) return;
+    try {
+      const idStok = activeTab === 'elektrik' ? item.id_stok_elektrik : item.id_stok_din_rad;
+      await repairsAPI.deleteStok(idStok, activeTab);
+      await loadData();
+    } catch (e) { alert('Gagal menghapus data'); }
   };
 
   const formatDate = (dateStr) => {
@@ -260,6 +299,7 @@ export default function StokPage({ onBack }) {
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Stok Saat Ini</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Batas Minimal</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Status</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-slate-300 uppercase">Aksi</th>
                     </>
                   ) : (
                     <>
@@ -271,6 +311,7 @@ export default function StokPage({ onBack }) {
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Stok</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Batas Min</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Status</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-slate-300 uppercase">Aksi</th>
                     </>
                   )}
                 </tr>
@@ -278,7 +319,7 @@ export default function StokPage({ onBack }) {
               <tbody className="bg-slate-950 divide-y divide-slate-800">
                 {filteredStok.length === 0 ? (
                   <tr>
-                    <td colSpan={activeTab === 'elektrik' ? 6 : 8} className="px-6 py-12 text-center text-slate-500">Belum ada data stok</td>
+                    <td colSpan={activeTab === 'elektrik' ? 7 : 9} className="px-6 py-12 text-center text-slate-500">Belum ada data stok</td>
                   </tr>
                 ) : (
                   filteredStok.map(item => {
@@ -293,6 +334,10 @@ export default function StokPage({ onBack }) {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.stok_saat_ini}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.batas_minimal}</td>
                             <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${badge.color}`}>{badge.text}</span></td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex items-center justify-end gap-2">
+                            <button onClick={(e) => { e.stopPropagation(); handleEdit(item); }} title="Edit" className="text-sky-400 hover:text-sky-300"><Edit size={14} /></button>
+                            {isLoggedIn && <button onClick={(e) => { e.stopPropagation(); handleDelete(item); }} title="Hapus" className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>}
+                          </td>
                           </>
                         ) : (
                           <>
@@ -304,6 +349,10 @@ export default function StokPage({ onBack }) {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.stok_saat_ini}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.batas_minimal}</td>
                             <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${badge.color}`}>{badge.text}</span></td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex items-center justify-end gap-2">
+                            <button onClick={(e) => { e.stopPropagation(); handleEdit(item); }} title="Edit" className="text-sky-400 hover:text-sky-300"><Edit size={14} /></button>
+                            {isLoggedIn && <button onClick={(e) => { e.stopPropagation(); handleDelete(item); }} title="Hapus" className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>}
+                          </td>
                           </>
                         )}
                       </tr>
@@ -321,8 +370,8 @@ export default function StokPage({ onBack }) {
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
           <div className="bg-gray-900 dark:bg-gray-800 border border-gray-700 dark:border-gray-700 rounded-xl shadow-2xl w-full max-w-lg">
             <div className="px-6 py-4 border-b border-gray-700 dark:border-gray-700 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-white">Input Stok Baru</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white"><X size={24} /></button>
+               <h2 className="text-xl font-bold text-white">{editingItem ? "Edit Stok" : "Input Stok Baru"}</h2>
+              <button onClick={() => { setShowModal(false); setEditingItem(null); }} className="text-gray-400 hover:text-white"><X size={24} /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {activeTab === 'elektrik' ? (

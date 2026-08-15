@@ -1,4 +1,4 @@
-// src/api.js
+﻿// src/api.js
 // Memanggil backend Vercel (/api/repairs dan /api/stok) yang sudah pakai Supabase,
 // bukan lagi Google Apps Script secara langsung.
 
@@ -240,6 +240,51 @@ export const repairsAPI = {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id_riwayat_produk: id }),
+    });
+    return parseJsonSafe(res);
+  },
+
+  deleteRepair: async (id) => {
+    const res = await fetch(`${REPAIRS_URL}?action=deleteRepair`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id_perbaikan: id }),
+    });
+    return parseJsonSafe(res);
+  },
+
+  deleteStok: async (id, tipe) => {
+    const res = await fetch(`${STOK_URL}?action=deleteStok`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id_stok: id, tipe: tipe }),
+    });
+    return parseJsonSafe(res);
+  },
+
+  deleteSuratJalan: async (id) => {
+    const res = await fetch(`${REPAIRS_URL}?action=deleteSuratJalan`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id_surat_jalan: id }),
+    });
+    return parseJsonSafe(res);
+  },
+
+  updateStokElektrik: async (data) => {
+    const res = await fetch(`${STOK_URL}?action=updateStokElektrik`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return parseJsonSafe(res);
+  },
+
+  updateStokDinRad: async (data) => {
+    const res = await fetch(`${STOK_URL}?action=updateStokDinRad`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
     });
     return parseJsonSafe(res);
   },

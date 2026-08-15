@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ArrowLeft, Plus, X, Edit, Trash2, Package, ArrowDownCircle, ArrowUpCircle, Loader2 } from "lucide-react";
 import { repairsAPI } from "../api";
 
-export default function ProdukReadyPage({ onBack }) {
+export default function ProdukReadyPage({ onBack, isLoggedIn }) {
   const [view, setView] = useState("ready"); // 'ready' | 'riwayat'
   const [items, setItems] = useState([]);
   const [riwayat, setRiwayat] = useState([]);
@@ -94,6 +94,10 @@ export default function ProdukReadyPage({ onBack }) {
   };
 
   const handleDelete = async (id) => {
+    if (!isLoggedIn) {
+      alert("Login admin untuk menghapus");
+      return;
+    }
     if (!window.confirm("Hapus data produk ready ini?")) return;
     try {
       await repairsAPI.deleteProdukReady(id);
@@ -228,7 +232,7 @@ export default function ProdukReadyPage({ onBack }) {
                           <button onClick={() => openTransaksiForm(item, "Masuk")} title="Stok Masuk" className="text-emerald-400 hover:text-emerald-300"><ArrowDownCircle size={16} /></button>
                           <button onClick={() => openTransaksiForm(item, "Keluar")} title="Stok Keluar" className="text-amber-400 hover:text-amber-300"><ArrowUpCircle size={16} /></button>
                           <button onClick={() => handleEdit(item)} className="text-sky-400 hover:text-sky-300"><Edit size={14} /></button>
-                          <button onClick={() => handleDelete(item.id_produk_ready)} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>
+                          {isLoggedIn && <button onClick={() => handleDelete(item.id_produk_ready)} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>}
                         </td>
                       </tr>
                     ))}

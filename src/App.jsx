@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Plus, X, RefreshCw, Wrench, Package, CheckCircle, Search, ArrowLeft, LayoutGrid, Home, Settings, Truck, Loader2 } from "lucide-react";
+import { Plus, X, RefreshCw, Wrench, Package, CheckCircle, Search, ArrowLeft, LayoutGrid, Home, Settings, Truck, Loader2, Trash2 } from "lucide-react";
 import { repairsAPI } from "./api";
 import StokPage from "./pages/StokPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -29,6 +29,9 @@ export default function LaporanPekerjaan() {
   const [isCreatingTicket, setIsCreatingTicket] = useState(false);
   const [isUpdatingTicket, setIsUpdatingTicket] = useState(false);
   const [page, setPage] = useState('dashboard'); // 'dashboard' | 'perbaikan' | 'stok' | 'terkirim' | 'produkready'
+  const [isLoggedIn, setIsLoggedIn] = useState(localStorage.getItem('isLoggedIn') === 'true');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginPassword, setLoginPassword] = useState("");
   const [repairFormData, setRepairFormData] = useState({
     nama_unit: "",
     id_mesin: "",
@@ -264,6 +267,44 @@ export default function LaporanPekerjaan() {
     }
   };
 
+  const handleLogin = () => {
+    setLoginPassword("");
+    setShowLoginModal(true);
+  };
+
+  const handleLoginSubmit = () => {
+    if (loginPassword === 'admin123') {
+      localStorage.setItem('isLoggedIn', 'true');
+      setIsLoggedIn(true);
+      setShowLoginModal(false);
+      setLoginPassword("");
+    } else {
+      alert('Password salah');
+    }
+  };
+
+  const handleLoginKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleLoginSubmit();
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    setIsLoggedIn(false);
+  };
+
+  const handleDeleteRepair = async (id) => {
+    if (!confirm('Hapus tiket perbaikan ini?')) return;
+    try {
+      await repairsAPI.deleteRepair(id);
+      setRepairs(prev => prev.filter(r => r.id_perbaikan !== id));
+      setArchive(prev => prev.filter(r => r.id_perbaikan !== id));
+    } catch (error) {
+      alert('Gagal menghapus tiket');
+    }
+  };
+
   const statusConfig = {
     "Menunggu Pengecekan": { color: "text-red-500", bg: "bg-red-50", icon: Wrench },
     "Dalam Pengerjaan": { color: "text-blue-500", bg: "bg-blue-50", icon: Wrench },
@@ -349,6 +390,9 @@ export default function LaporanPekerjaan() {
               <button onClick={() => setPage('produkready')} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${page === 'produkready' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'}`}>
                 <Package size={14} className="inline mr-1" />
                 Produk Ready
+              </button>
+              <button onClick={isLoggedIn ? handleLogout : handleLogin} className={`${isLoggedIn ? 'border border-red-500/50 bg-red-500/10 text-red-300 hover:bg-red-500/20' : 'border border-slate-600 bg-slate-800/80 text-slate-200 hover:bg-slate-700'} rounded-full px-4 py-2 text-xs font-semibold transition ml-3`}>
+                {isLoggedIn ? 'Logout' : 'Login'}
               </button>
             </div>
           </div>
@@ -485,7 +529,16 @@ export default function LaporanPekerjaan() {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{repair.lokasiOperasi || "-"}</td>
                             <td className="px-6 py-4 whitespace-nowrap"><span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${statusColor} bg-slate-800`}>{<StatusIcon size={12} />} {repair.status_perbaikan}</span></td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{repair.tgl_masuk ? new Date(repair.tgl_masuk).toLocaleDateString("id-ID") : "-"}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-emerald-400">Lihat</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="text-emerald-400 cursor-pointer" onClick={(e) => { e.stopPropagation(); handleCardClick(repair); }}>Lihat</span>
+                                {isLoggedIn && (
+                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteRepair(repair.id_perbaikan); }} className="text-red-400 hover:text-red-300 p-1">
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
                           </tr>
                         );
                       })}
@@ -543,7 +596,16 @@ export default function LaporanPekerjaan() {
                             <td className="px-6 py-4 whitespace-nowrap"><span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${statusColor} bg-slate-800`}>{<StatusIcon size={12} />} {repair.status_perbaikan}</span></td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{repair.tgl_masuk ? new Date(repair.tgl_masuk).toLocaleDateString("id-ID") : "-"}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{repair.tgl_keluar ? new Date(repair.tgl_keluar).toLocaleDateString("id-ID") : "-"}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-emerald-400">Edit</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="text-emerald-400 cursor-pointer" onClick={(e) => { e.stopPropagation(); handleCardClick(repair); }}>Edit</span>
+                                {isLoggedIn && (
+                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteRepair(repair.id_perbaikan); }} className="text-red-400 hover:text-red-300 p-1">
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
                           </tr>
                         );
                       })}
@@ -807,15 +869,15 @@ export default function LaporanPekerjaan() {
     </div>
   )}
   {page === 'stok' && (
-      <StokPage onBack={() => setPage('dashboard')} />
+      <StokPage onBack={() => setPage('dashboard')} isLoggedIn={isLoggedIn} />
     )}
 
     {page === 'terkirim' && (
-      <TerkirimPage onBack={() => setPage('dashboard')} />
+      <TerkirimPage onBack={() => setPage('dashboard')} isLoggedIn={isLoggedIn} />
     )}
 
     {page === 'produkready' && (
-      <ProdukReadyPage onBack={() => setPage('dashboard')} />
+      <ProdukReadyPage onBack={() => setPage('dashboard')} isLoggedIn={isLoggedIn} />
     )}
 
     {page !== 'dashboard' && (
@@ -829,6 +891,32 @@ export default function LaporanPekerjaan() {
         {page === 'stok' ? 'Kembali' : 'Stok'}
       </button>
     )}
-  </>
-);
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-sm">
+            <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center text-white">
+              <h3 className="text-lg font-semibold">Login Admin</h3>
+              <button onClick={() => setShowLoginModal(false)} className="text-gray-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <input
+                type="password"
+                placeholder="Masukkan password admin"
+                className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white"
+                value={loginPassword}
+                onChange={e => setLoginPassword(e.target.value)}
+                onKeyDown={handleLoginKeyDown}
+                autoFocus
+              />
+              <button onClick={handleLoginSubmit} className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-medium">
+                Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+   </>
+ );
 }
