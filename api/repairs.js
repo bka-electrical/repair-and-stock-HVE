@@ -713,6 +713,25 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
       }
 
+      if (action === "deleteRepair") {
+        const { error } = await supabase
+          .from("tb_perbaikan")
+          .delete()
+          .eq("id_perbaikan", data.id_perbaikan);
+        if (error) throw error;
+        return res.status(200).json({ success: true });
+      }
+
+      if (action === "deleteSuratJalan") {
+        const { error } = await supabase
+          .from("tb_surat_jalan")
+          .delete()
+          .eq("id_surat_jalan", data.id_surat_jalan);
+        if (error) throw error;
+        return res.status(200).json({ success: true });
+      }
+
+
       return res.status(400).json({ success: false, message: "Action tidak dikenal" });
     }
 
@@ -722,3 +741,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, message: error.message });
   }
 }
+

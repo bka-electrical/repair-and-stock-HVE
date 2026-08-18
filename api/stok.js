@@ -219,9 +219,67 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "Action tidak dikenal" });
     }
 
+    if (method === "PUT") {
+      const { action } = req.query;
+      const data = req.body;
+
+      if (action === "updateStokElektrik") {
+        const { error } = await supabase
+          .from("tb_stok_elektrik")
+          .update({
+            id_komponen: data.id_komponen || "",
+            nama_komponen: data.nama_komponen || "",
+            stok_saat_ini: parseInt(data.stok_saat_ini) || 0,
+            batas_minimal: parseInt(data.batas_minimal) || 0,
+          })
+          .eq("id_stok_elektrik", data.id_stok_elektrik);
+        if (error) throw error;
+        return res.status(200).json({ success: true });
+      }
+
+      if (action === "updateStokDinRad") {
+        const { error } = await supabase
+          .from("tb_stok_din_rad")
+          .update({
+            id_komponen: data.id_komponen || "",
+            kompatibilitas_unit: data.kompatibilitas_unit || "",
+            nama_spesifikasi_barang: data.nama_spesifikasi_barang || "",
+            posisi_rak: data.posisi_rak || "",
+            stok_saat_ini: parseInt(data.stok_saat_ini) || 0,
+            batas_minimal: parseInt(data.batas_minimal) || 0,
+          })
+          .eq("id_stok_din_rad", data.id_stok_din_rad);
+        if (error) throw error;
+        return res.status(200).json({ success: true });
+      }
+
+      return res.status(400).json({ success: false, message: "Action tidak dikenal" });
+    }
+
+    if (method === "DELETE") {
+      const { action } = req.query;
+      const data = req.body || {};
+
+      if (action === "deleteStok") {
+        const isElektrik = data.tipe === "elektrik";
+        const table = isElektrik ? "tb_stok_elektrik" : "tb_stok_din_rad";
+        const idCol = isElektrik ? "id_stok_elektrik" : "id_stok_din_rad";
+
+        const { error } = await supabase
+          .from(table)
+          .delete()
+          .eq(idCol, data.id_stok);
+        if (error) throw error;
+        return res.status(200).json({ success: true });
+      }
+
+      return res.status(400).json({ success: false, message: "Action tidak dikenal" });
+    }
+
     return res.status(405).json({ success: false, message: "Method not allowed" });
   } catch (error) {
     console.error("Stok API Error:", error);
     return res.status(500).json({ success: false, message: sanitizeError(error) });
   }
 }
+
