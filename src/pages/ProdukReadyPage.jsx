@@ -321,13 +321,15 @@ export default function ProdukReadyPage({ onBack, isLoggedIn }) {
                 <label className="block text-sm font-medium text-gray-200 mb-2">Keterangan</label>
                 <textarea className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white h-20 resize-none" placeholder="Tambahkan catatan..." value={formData.keterangan} onChange={e => setFormData({...formData, keterangan: e.target.value})} />
               </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); }} className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800">Batal</button>
-                <button type="submit" disabled={isSubmitting} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                  {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-                  {editingItem ? "Update" : "Simpan"}
-                </button>
-              </div>
+              {isLoggedIn && (
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); }} className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800">Batal</button>
+                  <button type="submit" disabled={isSubmitting} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                    {editingItem ? "Update" : "Simpan"}
+                  </button>
+                </div>
+              )}
             </form>
           </div>
         </div>

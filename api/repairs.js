@@ -617,7 +617,10 @@ export default async function handler(req, res) {
         const updateData = {
           nama_unit: payload.nama_unit || "",
           id_mesin: payload.id_mesin || "",
+          id_kategori_sparepart: payload.id_kategori_sparepart || "",
+          lokasi_operasi: payload.lokasiOperasi || "",
           status_perbaikan: payload.status,
+          tgl_masuk: payload.tgl_masuk || new Date().toISOString().split("T")[0],
           catatan: payload.catatan,
         };
         if (payload.tgl_keluar) updateData.tgl_keluar = payload.tgl_keluar;

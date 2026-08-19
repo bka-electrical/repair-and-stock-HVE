@@ -221,7 +221,10 @@ export default function LaporanPekerjaan() {
         tgl_keluar: selectedRepair.status_perbaikan === 'Selesai' ? new Date().toISOString().split('T')[0] : null,
         komponen: komponenWithJumlah,
         nama_unit: selectedRepair.nama_unit || '',
-        id_mesin: selectedRepair.id_mesin || ''
+        id_mesin: selectedRepair.id_mesin || '',
+        id_kategori_sparepart: selectedRepair.id_kategori_sparepart,
+        lokasiOperasi: selectedRepair.lokasiOperasi,
+        tgl_masuk: selectedRepair.tgl_masuk
       };
       await repairsAPI.update(payload);
 
@@ -652,25 +655,58 @@ export default function LaporanPekerjaan() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Nama Unit</p>
-                  <p className="font-medium text-white">{selectedRepair.nama_unit || "-"}</p>
+                  {isLoggedIn ? (
+                    <input type="text" className="w-full p-2 border border-gray-600 rounded bg-gray-800 text-white" value={selectedRepair.nama_unit || ""} onChange={e => setSelectedRepair({...selectedRepair, nama_unit: e.target.value})} />
+                  ) : (
+                    <p className="font-medium text-white">{selectedRepair.nama_unit || "-"}</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Nama Mesin</p>
-                  <p className="font-medium text-white">
-                    {(() => {
-                      const m = mesin.find(item => String(item.id_mesin) === String(selectedRepair.id_mesin));
-                      return m ? m.nama_mesin : (selectedRepair.id_mesin || "-");
-                    })()}
-                  </p>
+                  {isLoggedIn ? (
+                    <select className="w-full p-2 border border-gray-600 rounded bg-gray-800 text-white" value={selectedRepair.id_mesin || ""} onChange={e => setSelectedRepair({...selectedRepair, id_mesin: e.target.value})}>
+                      <option value="">-- Pilih Mesin --</option>
+                      {mesin.map(m => <option key={m.id_mesin} value={m.id_mesin}>{m.nama_mesin}</option>)}
+                    </select>
+                  ) : (
+                    <p className="font-medium text-white">
+                      {(() => {
+                        const m = mesin.find(item => String(item.id_mesin) === String(selectedRepair.id_mesin));
+                        return m ? m.nama_mesin : (selectedRepair.id_mesin || "-");
+                      })()}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Lokasi</p>
-                  <p className="font-medium text-white">{selectedRepair.lokasiOperasi || "-"}</p>
+                  {isLoggedIn ? (
+                    <select className="w-full p-2 border border-gray-600 rounded bg-gray-800 text-white" value={selectedRepair.lokasiOperasi || ""} onChange={e => setSelectedRepair({...selectedRepair, lokasiOperasi: e.target.value})}>
+                      <option value="">-- Pilih Lokasi --</option>
+                      {locations.map(l => <option key={l.id_lokasi} value={l.nama_lokasi}>{l.nama_lokasi}</option>)}
+                    </select>
+                  ) : (
+                    <p className="font-medium text-white">{selectedRepair.lokasiOperasi || "-"}</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Kategori</p>
-                  <p className="font-medium text-white">{selectedRepair.id_kategori_sparepart || "-"}</p>
+                  {isLoggedIn ? (
+                    <select className="w-full p-2 border border-gray-600 rounded bg-gray-800 text-white" value={selectedRepair.id_kategori_sparepart || ""} onChange={e => setSelectedRepair({...selectedRepair, id_kategori_sparepart: e.target.value})}>
+                      <option value="">-- Pilih Kategori --</option>
+                      {categories.map(c => <option key={c.id_kategori} value={c.nama_kategori}>{c.nama_kategori}</option>)}
+                    </select>
+                  ) : (
+                    <p className="font-medium text-white">{selectedRepair.id_kategori_sparepart || "-"}</p>
+                  )}
                 </div>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Tanggal Masuk</p>
+                {isLoggedIn ? (
+                  <input type="date" className="w-full p-2 border border-gray-600 rounded bg-gray-800 text-white" value={selectedRepair.tgl_masuk || ""} onChange={e => setSelectedRepair({...selectedRepair, tgl_masuk: e.target.value})} />
+                ) : (
+                  <p className="font-medium text-white">{selectedRepair.tgl_masuk ? new Date(selectedRepair.tgl_masuk).toLocaleDateString('id-ID') : "-"}</p>
+                )}
               </div>
 
               {komponenList.length > 0 && (
@@ -728,17 +764,20 @@ export default function LaporanPekerjaan() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-gray-900 dark:bg-gray-800 border-t border-gray-700 px-6 py-4 flex gap-3">
-              <button onClick={() => setSelectedRepair(null)} className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800">
-                Batal
-              </button>
-              <button onClick={handleUpdateTicket} disabled={isUpdatingTicket} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                {isUpdatingTicket && <Loader2 size={16} className="animate-spin" />}
-                Simpan Perubahan
-              </button>
-            </div>
+            {isLoggedIn && (
+              <div className="sticky bottom-0 bg-gray-900 dark:bg-gray-800 border-t border-gray-700 px-6 py-4 flex gap-3">
+                <button onClick={() => setSelectedRepair(null)} className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800">
+                  Batal
+                </button>
+                <button onClick={handleUpdateTicket} disabled={isUpdatingTicket} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  {isUpdatingTicket && <Loader2 size={16} className="animate-spin" />}
+                  Simpan Perubahan
+                </button>
+              </div>
+            )}
           </div>
         </div>
+      )}
       )}
 
       {/* Create Ticket Modal */}
@@ -920,3 +959,5 @@ export default function LaporanPekerjaan() {
    </>
  );
 }
+
+
