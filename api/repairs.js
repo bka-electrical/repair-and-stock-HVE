@@ -244,6 +244,81 @@ async function deductDinRadStock(idKomponen, jumlah, idMesin) {
   await handleStockNotification(idKomponen, newStok, match.batas_minimal || 0, "din_rad", match.nama_spesifikasi_barang);
 }
 
+async function restoreElektrikStock(idKomponen, jumlah) {
+  const { data: stokRows } = await supabase
+    .from("tb_stok_elektrik")
+    .select("*")
+    .eq("id_komponen", idKomponen)
+    .limit(1);
+
+  if (!stokRows || stokRows.length === 0) return;
+  const stok = stokRows[0];
+  const newStok = (stok.stok_saat_ini || 0) + jumlah;
+
+  await supabase
+    .from("tb_stok_elektrik")
+    .update({ stok_saat_ini: newStok })
+    .eq("id_stok_elektrik", stok.id_stok_elektrik);
+
+  const idRiwayat = await generateRiwayatId(true);
+  await supabase.from("tb_riwayat_elektrik").insert({
+    id_riwayat: idRiwayat,
+    id_stok_elektrik: stok.id_stok_elektrik,
+    jenis_transaksi: "Masuk",
+    jumlah,
+    tgl_transaksi: new Date().toISOString().split("T")[0],
+    keterangan: "Restore from ticket edit",
+  });
+
+  await handleStockNotification(idKomponen, newStok, stok.batas_minimal || 0, "elektrik", stok.nama_komponen);
+}
+
+async function restoreDinRadStock(idKomponen, jumlah, idMesin) {
+  let namaMesin = "";
+  if (idMesin) {
+    const { data: mesinRows } = await supabase
+      .from("tb_mesin")
+      .select("nama_mesin")
+      .eq("id_mesin", idMesin)
+      .limit(1);
+    if (mesinRows && mesinRows.length > 0) {
+      namaMesin = String(mesinRows[0].nama_mesin || "").toUpperCase();
+    }
+  }
+
+  const { data: stokRows } = await supabase
+    .from("tb_stok_din_rad")
+    .select("*")
+    .eq("id_komponen", idKomponen);
+
+  if (!stokRows) return;
+
+  const match = stokRows.find((row) => {
+    const kompatibilitas = String(row.kompatibilitas_unit || "").toUpperCase();
+    return kompatibilitas === "UNIVERSAL" || (namaMesin && kompatibilitas.includes(namaMesin));
+  });
+  if (!match) return;
+
+  const newStok = (match.stok_saat_ini || 0) + jumlah;
+
+  await supabase
+    .from("tb_stok_din_rad")
+    .update({ stok_saat_ini: newStok })
+    .eq("id_stok_din_rad", match.id_stok_din_rad);
+
+  const idRiwayat = await generateRiwayatId(false);
+  await supabase.from("tb_riwayat_din_rad").insert({
+    id_riwayat: idRiwayat,
+    id_stok_din_rad: match.id_stok_din_rad,
+    jenis_transaksi: "Masuk",
+    jumlah,
+    tgl_transaksi: new Date().toISOString().split("T")[0],
+    keterangan: "Restore from ticket edit",
+  });
+
+  await handleStockNotification(idKomponen, newStok, match.batas_minimal || 0, "din_rad", match.nama_spesifikasi_barang);
+}
+
 async function processKomponen(idPerbaikan, komponenList, idKategoriSparepart, idMesin) {
   if (!Array.isArray(komponenList)) return;
 
@@ -631,9 +706,55 @@ export default async function handler(req, res) {
           .eq("id_perbaikan", idPerbaikan);
         if (error) throw error;
 
+        const kategoriLowerPut = String(payload.id_kategori_sparepart || "").toLowerCase().trim();
+        const isElektrikPut = kategoriLowerPut.includes("elektrik");
+        const isDinRadPut = kategoriLowerPut.includes("dinamo") || kategoriLowerPut.includes("radiator");
+
         if (payload.komponen && Array.isArray(payload.komponen)) {
+          const { data: oldDetails } = await supabase
+            .from("tb_detail_perbaikan")
+            .select("id_komponen, jumlah")
+            .eq("id_perbaikan", idPerbaikan);
+
+          const oldMap = new Map();
+          for (const row of (oldDetails || [])) {
+            oldMap.set(String(row.id_komponen), parseInt(row.jumlah) || 1);
+          }
+
+          const newKomponen = payload.komponen;
+          const newMap = new Map();
+          for (const comp of newKomponen) {
+            newMap.set(String(comp.id_komponen), parseInt(comp.jumlah) || 1);
+          }
+
+          const allIds = new Set([...oldMap.keys(), ...newMap.keys()]);
+
+          for (const idKomponen of allIds) {
+            const oldQty = oldMap.get(idKomponen) || 0;
+            const newQty = newMap.get(idKomponen) || 0;
+            const delta = newQty - oldQty;
+
+            if (delta === 0) continue;
+
+            if (delta > 0) {
+              if (isElektrikPut) await deductElektrikStock(idKomponen, delta);
+              else if (isDinRadPut) await deductDinRadStock(idKomponen, delta, payload.id_mesin);
+            } else {
+              const restoreQty = Math.abs(delta);
+              if (isElektrikPut) await restoreElektrikStock(idKomponen, restoreQty);
+              else if (isDinRadPut) await restoreDinRadStock(idKomponen, restoreQty, payload.id_mesin);
+            }
+          }
+
           await supabase.from("tb_detail_perbaikan").delete().eq("id_perbaikan", idPerbaikan);
-          await processKomponen(idPerbaikan, payload.komponen, payload.id_kategori_sparepart, payload.id_mesin);
+          for (const comp of newKomponen) {
+            const jumlah = parseInt(comp.jumlah) || 1;
+            await supabase.from("tb_detail_perbaikan").insert({
+              id_perbaikan: idPerbaikan,
+              id_komponen: comp.id_komponen,
+              jumlah,
+            });
+          }
         }
 
         // Auto masuk ke stok produk ready hanya saat transisi PERTAMA KALI ke "Selesai"

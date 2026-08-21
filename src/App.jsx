@@ -732,24 +732,32 @@ export default function LaporanPekerjaan() {
                             {sisaStok !== null && (
                               <span className="text-xs text-gray-400 min-w-[48px] text-right">stok: {sisaStok}</span>
                             )}
-                            <input
-                              type="number"
-                              min="1"
-                              disabled={!checked}
-                              className={`w-16 p-2 border border-gray-600 rounded bg-gray-800 text-white text-center ${checked ? 'opacity-100' : 'opacity-50'}`}
-                              value={checked ? jumlah : ''}
-                              onChange={e => {
-                                const val = parseInt(e.target.value) || 1;
-                                setSelectedRepair(prev => ({
-                                  ...prev,
-                                  selectedKomponen: (prev.selectedKomponen || []).map(s =>
-                                    (typeof s === 'object' ? s.id_komponen : s) === k.id_komponen
-                                      ? { id_komponen: k.id_komponen, jumlah: Math.max(1, val) }
-                                      : s
-                                  )
-                                }));
-                              }}
-                            />
+                            {(() => {
+                               const isAccu = selectedRepair.id_kategori_sparepart === 'Accu';
+                               const raw = e => e.target.value;
+                               return (
+                                 <input
+                                   type="number"
+                                   step={isAccu ? "any" : "1"}
+                                   min={isAccu ? "0" : "1"}
+                                   disabled={!checked}
+                                   className={`w-16 p-2 border border-gray-600 rounded bg-gray-800 text-white text-center ${checked ? 'opacity-100' : 'opacity-50'}`}
+                                   value={checked ? jumlah : ''}
+                                   onChange={e => {
+                                     const val = isAccu ? (parseFloat(raw(e)) || 0) : (parseInt(raw(e)) || 1);
+                                     setSelectedRepair(prev => ({
+                                       ...prev,
+                                       selectedKomponen: (prev.selectedKomponen || []).map(s =>
+                                         (typeof s === 'object' ? s.id_komponen : s) === k.id_komponen
+                                           ? { id_komponen: k.id_komponen, jumlah: isAccu ? Math.max(0, val) : Math.max(1, val) }
+                                           : s
+                                       )
+                                     }));
+                                   }}
+                                 />
+                               );
+                             })()}
+
                           </div>
                         </label>
                       );
@@ -836,17 +844,25 @@ export default function LaporanPekerjaan() {
                                     {sisaStok !== null && (
                                       <span className="text-xs text-gray-400 min-w-[48px] text-right">stok: {sisaStok}</span>
                                     )}
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      disabled={!checked}
-                                      className={`w-16 p-2 border border-gray-600 rounded bg-gray-800 text-white text-center ${checked ? 'opacity-100' : 'opacity-50'}`}
-                                      value={selected ? selected.jumlah : ''}
-                                      onChange={e => {
-                                        const val = parseInt(e.target.value) || 1;
-                                        setSelectedKomponen(prev => prev.map(s => s.id_komponen === k.id_komponen ? { ...s, jumlah: Math.max(1, val) } : s));
-                                      }}
-                                    />
+                                    {(() => {
+                                      const isAccu = repairFormData.id_kategori_sparepart === 'Accu';
+                                      const raw = e => e.target.value;
+                                      return (
+                                        <input
+                                          type="number"
+                                          step={isAccu ? "any" : "1"}
+                                          min={isAccu ? "0" : "1"}
+                                          disabled={!checked}
+                                          className={`w-16 p-2 border border-gray-600 rounded bg-gray-800 text-white text-center ${checked ? 'opacity-100' : 'opacity-50'}`}
+                                          value={selected ? selected.jumlah : ''}
+                                          onChange={e => {
+                                            const val = isAccu ? (parseFloat(raw(e)) || 0) : (parseInt(raw(e)) || 1);
+                                            setSelectedKomponen(prev => prev.map(s => s.id_komponen === k.id_komponen ? { ...s, jumlah: isAccu ? Math.max(0, val) : Math.max(1, val) } : s));
+                                          }}
+                                        />
+                                      );
+                                    })()}
+
                                   </div>
                                 </label>
                               );
@@ -871,7 +887,8 @@ export default function LaporanPekerjaan() {
                         <div>
                           <label className="block text-sm font-medium text-gray-200 mb-2">Riwayat Sisa</label>
                           <input
-                            type="text"
+                            type="number"
+                            step="any"
                             className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white"
                             placeholder="Masukkan riwayat sisa"
                             value={repairFormData.riwayat_sisa}
